@@ -4,7 +4,10 @@
 #include <string.h>
 #include <ctype.h>
 #include <pthread.h>
+#include <sys/time.h>
 #include "fs/operations.h"
+
+struct timeval stop, start;
 
 #define MAX_COMMANDS 150000
 #define MAX_INPUT_SIZE 100
@@ -105,7 +108,7 @@ void processInput_aux(char* inputPath) {
     fclose(fp);
 }
 
-void applyCommands(){
+void applyCommands() {
     while (numberCommands > 0){
         const char* command = removeCommand();
         if (command == NULL){
@@ -137,7 +140,7 @@ void applyCommands(){
                         exit(EXIT_FAILURE);
                 }
                 break;
-            case 'l': 
+            case 'l':
                 searchResult = lookup(name);
                 if (searchResult >= 0)
                     printf("Search: %s found\n", name);
@@ -160,29 +163,24 @@ void applyCommands(){
  * Initializes the thread pool.
  */
 
-void startThreadPool(char* numthreads, char* syncStrat){
+void startThreadPool(char* numthreads){
     int n = atoi(numthreads), i;
     if (n <= 0){
         perror("Invalid value, please try again!\n");
         exit(EXIT_FAILURE);
     }
-    if (!strcmp("nosync", syncStrat) && n != 1){
-        perror("Invalid value, please try again!\n");
-        exit(EXIT_FAILURE);
-    }
-    else
-    {
-        pthread_t* tid = (pthread_t*) malloc (sizeof(pthread_t) * n);
-        for (i = 0; i < n; i++){
-            if(!pthread_create(tid + i, NULL, (void*) applyCommands, NULL))
-                printf("Thread number %ld created successfully.\n", tid[i]);
-            else
-            {
-                perror("Thread not created!");
-                exit(EXIT_FAILURE);
-            }
+    pthread_t* tid = (pthread_t*) malloc (sizeof(pthread_t) * n);
+    for (i = 0; i < n; i++){
+        if(!pthread_create(tid + i, NULL, (void*) applyCommands, NULL))
+            printf("Thread number %ld created successfully.\n", tid[i]);
+        else
+        {
+            perror("Thread not created!");
+            exit(EXIT_FAILURE);
         }
     }
+    /* start the clock */
+    gettimeofday(&start, NULL);     
 }
 
 int main(int argc, char* argv[]) {
@@ -191,11 +189,16 @@ int main(int argc, char* argv[]) {
 
     /* process input and print tree */
     processInput_aux(argv[1]);
-    startThreadPool(argv[3], argv[4]);
+    startThreadPool(argv[3]);
     applyCommands();
     print_tecnicofs_tree_aux(argv[2]);
 
     /* release allocated memory */
     destroy_fs();
+
+    /* end the clock */
+    gettimeofday(&stop, NULL);
+    printf("TecnicoFS completed in %.4f seconds.\n", (double) ((stop.tv_sec - start.tv_sec) * 1000000 + stop.tv_usec - start.tv_usec)/1000);
+
     exit(EXIT_SUCCESS);
 }
