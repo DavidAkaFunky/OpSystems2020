@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <pthread.h>
 #include "state.h"
 #include "../tecnicofs-api-constants.h"
 
@@ -14,7 +15,6 @@ inode_t inode_table[INODE_TABLE_SIZE];
 void insert_delay(int cycles) {
     for (int i = 0; i < cycles; i++) {}
 }
-
 
 /*
  * Initializes the i-nodes table.

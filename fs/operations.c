@@ -271,8 +271,6 @@ int lookup(char *name) {
  * Input:
  *  - fp: pointer to output file
  */
-void print_tecnicofs_tree(char* path){
-	FILE *fp = fopen(path, "w");
+void print_tecnicofs_tree(FILE *fp){
 	inode_print_tree(fp, FS_ROOT, "");
-	fclose(fp);
 }

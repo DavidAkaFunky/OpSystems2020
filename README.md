@@ -1,2 +1,2 @@
-# good_penguin_stuff
-Projeto de SO
+# SO Project 2020-21
+## Exercise 1 base code.
