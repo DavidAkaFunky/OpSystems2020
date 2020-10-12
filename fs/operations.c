@@ -55,7 +55,6 @@ void init_fs() {
 	}
 }
 
-
 /*
  * Destroy tecnicofs and inode table.
  */

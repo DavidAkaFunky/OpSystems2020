@@ -89,7 +89,9 @@ int inode_delete(int inumber) {
         printf("inode_delete: invalid inumber\n");
         return FAIL;
     } 
-
+    /** 
+     * CRITICAL SECTION 
+     * */
     inode_table[inumber].nodeType = T_NONE;
     /* see inode_table_destroy function */
     if (inode_table[inumber].data.dirEntries)
@@ -151,7 +153,9 @@ int dir_reset_entry(int inumber, int sub_inumber) {
         return FAIL;
     }
 
-    
+    /** 
+     * CRITICAL SECTION 
+     * */
     for (int i = 0; i < MAX_DIR_ENTRIES; i++) {
         if (inode_table[inumber].data.dirEntries[i].inumber == sub_inumber) {
             inode_table[inumber].data.dirEntries[i].inumber = FREE_INODE;
@@ -195,7 +199,9 @@ int dir_add_entry(int inumber, int sub_inumber, char *sub_name) {
                entry name must be non-empty\n");
         return FAIL;
     }
-    
+    /** 
+     * CRITICAL SECTION 
+     * */
     for (int i = 0; i < MAX_DIR_ENTRIES; i++) {
         if (inode_table[inumber].data.dirEntries[i].inumber == FREE_INODE) {
             inode_table[inumber].data.dirEntries[i].inumber = sub_inumber;
@@ -214,11 +220,17 @@ int dir_add_entry(int inumber, int sub_inumber, char *sub_name) {
  *  - name: pointer to the name of current file/dir
  */
 void inode_print_tree(FILE *fp, int inumber, char *name) {
+    /** 
+     * CRITICAL SECTION - RWLOCK
+     * */
     if (inode_table[inumber].nodeType == T_FILE) {
         fprintf(fp, "%s\n", name);
         return;
     }
 
+    /** 
+     * CRITICAL SECTION - RWLOCK
+     * */
     if (inode_table[inumber].nodeType == T_DIRECTORY) {
         fprintf(fp, "%s\n", name);
         for (int i = 0; i < MAX_DIR_ENTRIES; i++) {

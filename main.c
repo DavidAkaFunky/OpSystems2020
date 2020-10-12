@@ -7,7 +7,6 @@
 #include <sys/time.h>
 #include "fs/operations.h"
 
-struct timeval stop, start;
 
 #define MAX_COMMANDS 150000
 #define MAX_INPUT_SIZE 100
@@ -17,6 +16,10 @@ int numberThreads = 0;
 char inputCommands[MAX_COMMANDS][MAX_INPUT_SIZE];
 int numberCommands = 0;
 int headQueue = 0;
+
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+struct timeval  tv1, tv2;
 
 int insertCommand(char* data) {
     if(numberCommands != MAX_COMMANDS) {
@@ -117,7 +120,11 @@ void applyCommands() {
 
         char token, type;
         char name[MAX_INPUT_SIZE];
+
+        pthread_mutex_lock(&mutex);
         int numTokens = sscanf(command, "%c %s %c", &token, name, &type);
+        pthread_mutex_unlock(&mutex);
+        printf("Command: %s\n", command);
         if (numTokens < 2) {
             fprintf(stderr, "Error: invalid command in Queue\n");
             exit(EXIT_FAILURE);
@@ -163,15 +170,17 @@ void applyCommands() {
  * Initializes the thread pool.
  */
 
-void startThreadPool(char* numthreads){
-    int n = atoi(numthreads), i;
-    if (n <= 0){
-        perror("Invalid value, please try again!\n");
+void startThreadPool(char* numThreads, char* syncStrategy){
+    int n = atoi(numThreads), i;
+    
+    if (n <= 0 || (n > 1 && !strcmp(syncStrategy, "nosync"))) {
+        perror("Error starting thread pool, please try again!\n");
         exit(EXIT_FAILURE);
     }
-    pthread_t* tid = (pthread_t*) malloc (sizeof(pthread_t) * n);
+
+    pthread_t tid[n];
     for (i = 0; i < n; i++){
-        if(!pthread_create(tid + i, NULL, (void*) applyCommands, NULL))
+        if(!pthread_create(&tid[i], NULL, (void*) applyCommands, NULL))
             printf("Thread number %ld created successfully.\n", tid[i]);
         else
         {
@@ -179,17 +188,31 @@ void startThreadPool(char* numthreads){
             exit(EXIT_FAILURE);
         }
     }
-    /* start the clock */
-    gettimeofday(&start, NULL);     
+    /* wait for them to finish */
+    for (i = 0; i < n; i++){
+        if (pthread_join(tid[i], NULL) != 0) {
+            perror("Thread failed to join!");
+            exit(EXIT_FAILURE);
+        }
+    }
+
 }
 
 int main(int argc, char* argv[]) {
+    /* check argc */ 
+    if (argc != 5) {
+        perror("Usage: ./tecnicofs inputfile outputfile numthreads synchstrategy\n");
+        exit(EXIT_FAILURE);
+    }
+
     /* init filesystem */
     init_fs();
 
     /* process input and print tree */
     processInput_aux(argv[1]);
-    startThreadPool(argv[3]);
+    startThreadPool(argv[3], argv[4]);
+    /* start the clock right after pool thread creation */
+    gettimeofday(&tv1, NULL);
     applyCommands();
     print_tecnicofs_tree_aux(argv[2]);
 
@@ -197,8 +220,10 @@ int main(int argc, char* argv[]) {
     destroy_fs();
 
     /* end the clock */
-    gettimeofday(&stop, NULL);
-    printf("TecnicoFS completed in %.4f seconds.\n", (double) ((stop.tv_sec - start.tv_sec) * 1000000 + stop.tv_usec - start.tv_usec)/1000);
+    gettimeofday(&tv2, NULL);
+    printf ("TecnicoFS completed in %.4f seconds.\n",
+         (double) (tv2.tv_usec - tv1.tv_usec) / 1000000 +
+         (double) (tv2.tv_sec - tv1.tv_sec));
 
     exit(EXIT_SUCCESS);
 }
