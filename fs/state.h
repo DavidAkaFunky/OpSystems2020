@@ -62,9 +62,9 @@ int inode_set_file(int inumber, char *fileContents, int len);
 int dir_reset_entry(int inumber, int sub_inumber);
 int dir_add_entry(int inumber, int sub_inumber, char *sub_name);
 void inode_print_tree(FILE *fp, int inumber, char *name);
-void lock_read(int syncStrat);
-void lock_write(int syncStrat);
-void unlock(int syncStrat);
+void lockRead();
+void lockWrite();
+void unlock();
 void destroySyncStructures();
 
 #endif /* INODES_H */

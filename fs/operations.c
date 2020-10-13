@@ -6,7 +6,7 @@
 /* Given a path, fills pointers with strings for the parent path and child
  * file name
  * Input:
- *  - path: the path to split. ATENTION: the function may alter this parameter
+ *  - path: the path to split. ATTENTION: the function may alter this parameter
  *  - parent: reference to a char*, to store parent path
  *  - child: reference to a char*, to store child file name
  */
@@ -44,10 +44,15 @@ void split_parent_child_from_path(char * path, char ** parent, char ** child) {
  * Initializes tecnicofs and creates root node.
  */
 void init_fs() {
+	/**
+	 * CRITICAL SECTION
+	 */
+	lockWrite();
 	inode_table_init();
 	
 	/* create root inode */
 	int root = inode_create(T_DIRECTORY);
+	unlock();
 	
 	if (root != FS_ROOT) {
 		printf("failed to create node for tecnicofs root\n");

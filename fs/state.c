@@ -24,7 +24,6 @@ void inode_table_init() {
         inode_table[i].data.dirEntries = NULL;
         inode_table[i].data.fileContents = NULL;
     }
-    printf("%d\n", syncStrategy);
 }
 
 /*
@@ -36,8 +35,9 @@ void inode_table_destroy() {
         if (inode_table[i].nodeType != T_NONE) {
             /* as data is an union, the same pointer is used for both dirEntries and fileContents */
             /* just release one of them */
-	  if (inode_table[i].data.dirEntries)
-            free(inode_table[i].data.dirEntries);
+	        if (inode_table[i].data.dirEntries) {
+                free(inode_table[i].data.dirEntries);
+            }
         }
     }
 }
@@ -88,10 +88,7 @@ int inode_delete(int inumber) {
     if ((inumber < 0) || (inumber > INODE_TABLE_SIZE) || (inode_table[inumber].nodeType == T_NONE)) {
         printf("inode_delete: invalid inumber\n");
         return FAIL;
-    } 
-    /** 
-     * CRITICAL SECTION 
-     * */
+    }
     inode_table[inumber].nodeType = T_NONE;
     /* see inode_table_destroy function */
     if (inode_table[inumber].data.dirEntries)
@@ -117,6 +114,9 @@ int inode_get(int inumber, type *nType, union Data *data) {
         return FAIL;
     }
 
+    /**
+    * CRITICAL SECTION 
+    * */
     if (nType)
         *nType = inode_table[inumber].nodeType;
 
@@ -199,11 +199,11 @@ int dir_add_entry(int inumber, int sub_inumber, char *sub_name) {
                entry name must be non-empty\n");
         return FAIL;
     }
-    /** 
-     * CRITICAL SECTION 
-     * */
     for (int i = 0; i < MAX_DIR_ENTRIES; i++) {
         if (inode_table[inumber].data.dirEntries[i].inumber == FREE_INODE) {
+            /**
+             * CRITICAL SECTION 
+            * */
             inode_table[inumber].data.dirEntries[i].inumber = sub_inumber;
             strcpy(inode_table[inumber].data.dirEntries[i].name, sub_name);
             return SUCCESS;
@@ -220,17 +220,12 @@ int dir_add_entry(int inumber, int sub_inumber, char *sub_name) {
  *  - name: pointer to the name of current file/dir
  */
 void inode_print_tree(FILE *fp, int inumber, char *name) {
-    /** 
-     * CRITICAL SECTION - RWLOCK
-     * */
+    
     if (inode_table[inumber].nodeType == T_FILE) {
         fprintf(fp, "%s\n", name);
         return;
     }
 
-    /** 
-     * CRITICAL SECTION - RWLOCK
-     * */
     if (inode_table[inumber].nodeType == T_DIRECTORY) {
         fprintf(fp, "%s\n", name);
         for (int i = 0; i < MAX_DIR_ENTRIES; i++) {
@@ -245,34 +240,32 @@ void inode_print_tree(FILE *fp, int inumber, char *name) {
     }
 }
 
-//Locks the RWLock (read mode) or Mutex depending on the synchronisation strategy.
-void lock_read(int syncStrat){
-	if (syncStrat == RWLOCK)
+// Locks the RWLock (read mode) or Mutex depending on the synchronisation strategy.
+void lockRead(){
+	if (syncStrategy == RWLOCK)
 		pthread_rwlock_rdlock(&rwl);
-
-	else if (syncStrat == MUTEX)
+	else if (syncStrategy == MUTEX)
 		pthread_mutex_lock(&mutex);
 }
 
 //Locks the RWLock (read+write mode) or Mutex depending on the synchronisation strategy.
-void lock_write(int syncStrat){
-	if (syncStrat == RWLOCK)
+void lockWrite(){
+	if (syncStrategy == RWLOCK)
 		pthread_rwlock_wrlock(&rwl);
-
-	else if (syncStrat == MUTEX)
+	else if (syncStrategy == MUTEX)
 		pthread_mutex_lock(&mutex);
 }
 
-//Unlocks the RWLock or Mutex depending on the synchronisation strategy.
-void unlock(int syncStrat){
-	if (syncStrat == RWLOCK)
+//Unlocks the RWLock or Mutex depending on the synchronization strategy.
+void unlock(){
+	if (syncStrategy == RWLOCK)
 		pthread_rwlock_unlock(&rwl);
 
-	else if (syncStrat == MUTEX)
+	else if (syncStrategy == MUTEX)
 		pthread_mutex_unlock(&mutex);
 }
 
-//Destroys the thread
+//Destroys the synchronization structures
 void destroySyncStructures(){
     pthread_mutex_destroy(&mutex);
     if (syncStrategy == RWLOCK)

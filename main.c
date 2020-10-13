@@ -17,7 +17,7 @@ char inputCommands[MAX_COMMANDS][MAX_INPUT_SIZE];
 int numberCommands = 0;
 int headQueue = 0;
 
-struct timeval  tv1, tv2;
+struct timeval tv1, tv2;
 
 int insertCommand(char* data) {
     if(numberCommands != MAX_COMMANDS) {
@@ -54,11 +54,17 @@ void print_tecnicofs_tree_aux(char* outputPath) {
 }
 
 void validateArguments(char* numThreads, char* syncStrat){
-        
     int n = atoi(numThreads), i, validStrat = 0;
     const char* validStrats[] = {"nosync", "mutex", "rwlock"};
 
-    if (n <= 0 || (n > 1 && !strcmp(syncStrat, "nosync"))) {
+    /* atoi error */
+    if (n <= 0) {
+        fprintf(stderr, "Error starting thread pool, please try again!\n");
+        exit(EXIT_FAILURE);
+    }
+    
+    /* nosync with multiple thread error */
+    if (n > 1 && !strcmp(syncStrat, "nosync")) {
         fprintf(stderr, "Error starting thread pool, please try again!\n");
         exit(EXIT_FAILURE);
     }
@@ -66,7 +72,7 @@ void validateArguments(char* numThreads, char* syncStrat){
     numberThreads = n;
 
     /* process input strategy */
-    for (i = 0; i < 3; i++)
+    for (i = 0; i < 3; i++) {
         if (!strcmp(syncStrat, validStrats[i])){
             if (i == RWLOCK)
                 pthread_rwlock_init(&rwl, NULL);
@@ -74,9 +80,11 @@ void validateArguments(char* numThreads, char* syncStrat){
             validStrat++;
             break;
         }
+    }
 
+    /* input syncronization strategy is invalid */
     if (!validStrat){
-        fprintf(stderr, "Invalid synchronisation strategy, please try again!\n");
+        fprintf(stderr, "Invalid synchronization strategy, please try again!\n");
         exit(EXIT_FAILURE);
     }
     
@@ -199,10 +207,12 @@ void applyCommands() {
  */
 
 void startThreadPool(){
-
     int i;
     pthread_t tid[numberThreads];
-
+    /* main thread will be responsible */
+    if (numberThreads == 1) {
+        return;
+    }
     for (i = 0; i < numberThreads; i++){
         if(!pthread_create(&tid[i], NULL, (void*) applyCommands, NULL))
             printf("Thread number %d created successfully.\n", i);
@@ -230,11 +240,10 @@ int main(int argc, char* argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    validateArguments(argv[3], argv[4]);
-
     /* init filesystem and dinamically initialize mutex */
-    init_fs();
+    validateArguments(argv[3], argv[4]);
     pthread_mutex_init(&mutex, NULL);
+    init_fs();
 
     /* process input and print tree */
     processInput_aux(argv[1]);
@@ -243,7 +252,6 @@ int main(int argc, char* argv[]) {
     gettimeofday(&tv1, NULL);
     applyCommands();
     print_tecnicofs_tree_aux(argv[2]);
-
     /* release allocated memory and destroy mutex */
     destroy_fs();
     destroySyncStructures();
