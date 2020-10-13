@@ -44,15 +44,11 @@ void split_parent_child_from_path(char * path, char ** parent, char ** child) {
  * Initializes tecnicofs and creates root node.
  */
 void init_fs() {
-	/**
-	 * CRITICAL SECTION
-	 */
-	lockWrite();
+
 	inode_table_init();
 	
 	/* create root inode */
 	int root = inode_create(T_DIRECTORY);
-	unlock();
 	
 	if (root != FS_ROOT) {
 		printf("failed to create node for tecnicofs root\n");

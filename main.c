@@ -210,9 +210,6 @@ void startThreadPool(){
     int i;
     pthread_t tid[numberThreads];
     /* main thread will be responsible */
-    if (numberThreads == 1) {
-        return;
-    }
     for (i = 0; i < numberThreads; i++){
         if(!pthread_create(&tid[i], NULL, (void*) applyCommands, NULL))
             printf("Thread number %d created successfully.\n", i);
@@ -241,20 +238,22 @@ int main(int argc, char* argv[]) {
     }
 
     /* init filesystem and dinamically initialize mutex */
-    validateArguments(argv[3], argv[4]);
-    pthread_mutex_init(&mutex, NULL);
     init_fs();
+    pthread_mutex_init(&mutex, NULL);
+
+    validateArguments(argv[3], argv[4]);
 
     /* process input and print tree */
     processInput_aux(argv[1]);
     startThreadPool();
+
     /* start the clock right after pool thread creation */
     gettimeofday(&tv1, NULL);
-    applyCommands();
     print_tecnicofs_tree_aux(argv[2]);
+
     /* release allocated memory and destroy mutex */
-    destroy_fs();
     destroySyncStructures();
+    destroy_fs();
 
     /* end the clock */
     gettimeofday(&tv2, NULL);
