@@ -18,6 +18,8 @@ int numberCommands = 0;
 int headQueue = 0;
 
 pthread_mutex_t mutex;
+pthread_rwlock_t rwl;
+
 
 struct timeval  tv1, tv2;
 
@@ -55,7 +57,30 @@ void print_tecnicofs_tree_aux(char* outputPath) {
     fclose(fp);
 }
 
+void validateArguments(char* numThreads, char* syncStrat){
+        
+    int n = atoi(numThreads), i, validStrat = 0;
+    char*[3] validStrats = {"nosync", "mutex", "rwlock"}
 
+    if (n <= 0 || (n > 1 && !strcmp(syncStrategy, "nosync"))) {
+        fprintf(stderr, "Error starting thread pool, please try again!\n");
+        exit(EXIT_FAILURE);
+    }
+
+    numberThreads = n;
+
+    for (i = 0; i < 3; i++)
+        if (!strcmp(syncStrat, validStrats[i])){
+            validStrat++;
+            break;
+        }
+
+    if (!validStrat){
+        fprintf(stderr, "Invalid synchronisation strategy, please try again!\n");
+        exit(EXIT_FAILURE);
+    }
+
+}
 void processInput(FILE* fp){
     char line[MAX_INPUT_SIZE];
 
@@ -110,6 +135,7 @@ void processInput_aux(char* inputPath) {
         fprintf(stderr, "Input path invalid, please try again!\n");
         exit(EXIT_FAILURE);
     }
+    
     processInput(fp);
     fclose(fp);
 }
@@ -170,13 +196,7 @@ void applyCommands() {
  * Initializes the thread pool.
  */
 
-void startThreadPool(char* numThreads, char* syncStrategy){
-    int n = atoi(numThreads), i;
-    
-    if (n <= 0 || (n > 1 && !strcmp(syncStrategy, "nosync"))) {
-        fprintf(stderr, "Error starting thread pool, please try again!\n");
-        exit(EXIT_FAILURE);
-    }
+void startThreadPool(){
 
     pthread_t tid[n];
     for (i = 0; i < n; i++){
@@ -199,6 +219,7 @@ void startThreadPool(char* numThreads, char* syncStrategy){
 }
 
 int main(int argc, char* argv[]) {
+    
     /* check argc */ 
     if (argc != 5) {
         fprintf(stderr, "Usage: ./tecnicofs inputfile outputfile numthreads synchstrategy\n");
@@ -208,10 +229,12 @@ int main(int argc, char* argv[]) {
     /* init filesystem and dinamically initialize mutex */
     init_fs();
     pthread_mutex_init(&mutex, NULL);
+    pthread_rwlock_init(&rwl, NULL);
 
     /* process input and print tree */
+    validateArguments(argv[3], argv[4]);
     processInput_aux(argv[1]);
-    startThreadPool(argv[3], argv[4]);
+    startThreadPool();
     /* start the clock right after pool thread creation */
     gettimeofday(&tv1, NULL);
     applyCommands();

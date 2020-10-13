@@ -273,3 +273,27 @@ int lookup(char *name) {
 void print_tecnicofs_tree(FILE *fp){
 	inode_print_tree(fp, FS_ROOT, "");
 }
+
+void lock_read(char* syncStrat){
+	if (!strcmp(syncStrat, "rwlock"))
+		pthread_rwlock_rdlock(&rwl);
+
+	else if (!strcmp(syncStrat, "mutex"))
+		pthread_mutex_lock(&mutex);
+}
+
+void lock_write(char* syncStrat){
+	if (!strcmp(syncStrat, "rwlock"))
+		pthread_rwlock_wrlock(&rwl);
+
+	else if (!strcmp(syncStrat, "mutex"))
+		pthread_mutex_lock(&mutex);
+}
+
+void unlock(char* syncStrat){
+	if (!strcmp(syncStrat, "rwlock"))
+		pthread_rwlock_unlock(&rwl);
+
+	else if (!strcmp(syncStrat, "mutex"))
+		pthread_mutex_unlock(&mutex);
+}
