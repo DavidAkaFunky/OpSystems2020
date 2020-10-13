@@ -8,6 +8,9 @@
 
 inode_t inode_table[INODE_TABLE_SIZE];
 
+extern pthread_mutex_t mutex;
+extern pthread_rwlock_t rwl;
+extern int syncStrategy;
 
 /*
  * Sleeps for synchronization testing.
@@ -243,4 +246,28 @@ void inode_print_tree(FILE *fp, int inumber, char *name) {
             }
         }
     }
+}
+
+void lock_read(int syncStrat){
+	if (syncStrat == RWLOCK)
+		pthread_rwlock_rdlock(&rwl);
+
+	else if (syncStrat == MUTEX)
+		pthread_mutex_lock(&mutex);
+}
+
+void lock_write(int syncStrat){
+	if (syncStrat == RWLOCK)
+		pthread_rwlock_wrlock(&rwl);
+
+	else if (syncStrat == MUTEX)
+		pthread_mutex_lock(&mutex);
+}
+
+void unlock(int syncStrat){
+	if (syncStrat == RWLOCK)
+		pthread_rwlock_unlock(&rwl);
+
+	else if (syncStrat == MUTEX)
+		pthread_mutex_unlock(&mutex);
 }

@@ -19,7 +19,7 @@ int headQueue = 0;
 
 pthread_mutex_t mutex;
 pthread_rwlock_t rwl;
-
+int syncStrategy;
 
 struct timeval  tv1, tv2;
 
@@ -60,17 +60,19 @@ void print_tecnicofs_tree_aux(char* outputPath) {
 void validateArguments(char* numThreads, char* syncStrat){
         
     int n = atoi(numThreads), i, validStrat = 0;
-    char*[3] validStrats = {"nosync", "mutex", "rwlock"}
+    const char* validStrats[] = {"nosync", "mutex", "rwlock"};
 
-    if (n <= 0 || (n > 1 && !strcmp(syncStrategy, "nosync"))) {
+    if (n <= 0 || (n > 1 && !strcmp(syncStrat, "nosync"))) {
         fprintf(stderr, "Error starting thread pool, please try again!\n");
         exit(EXIT_FAILURE);
     }
 
     numberThreads = n;
 
+    /* process input strategy */
     for (i = 0; i < 3; i++)
         if (!strcmp(syncStrat, validStrats[i])){
+            syncStrategy = i;
             validStrat++;
             break;
         }
@@ -79,8 +81,10 @@ void validateArguments(char* numThreads, char* syncStrat){
         fprintf(stderr, "Invalid synchronisation strategy, please try again!\n");
         exit(EXIT_FAILURE);
     }
-
+    
 }
+
+
 void processInput(FILE* fp){
     char line[MAX_INPUT_SIZE];
 
@@ -198,8 +202,10 @@ void applyCommands() {
 
 void startThreadPool(){
 
-    pthread_t tid[n];
-    for (i = 0; i < n; i++){
+    int i;
+    pthread_t tid[numberThreads];
+
+    for (i = 0; i < numberThreads; i++){
         if(!pthread_create(&tid[i], NULL, (void*) applyCommands, NULL))
             printf("Thread number %d created successfully.\n", i);
         else
@@ -209,7 +215,7 @@ void startThreadPool(){
         }
     }
     /* wait for them to finish */
-    for (i = 0; i < n; i++){
+    for (i = 0; i < numberThreads; i++){
         if (pthread_join(tid[i], NULL) != 0) {
             fprintf(stderr, "Thread failed to join!");
             exit(EXIT_FAILURE);
@@ -226,13 +232,14 @@ int main(int argc, char* argv[]) {
         exit(EXIT_FAILURE);
     }
 
+    validateArguments(argv[3], argv[4]);
+
     /* init filesystem and dinamically initialize mutex */
     init_fs();
     pthread_mutex_init(&mutex, NULL);
     pthread_rwlock_init(&rwl, NULL);
 
     /* process input and print tree */
-    validateArguments(argv[3], argv[4]);
     processInput_aux(argv[1]);
     startThreadPool();
     /* start the clock right after pool thread creation */

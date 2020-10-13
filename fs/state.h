@@ -18,6 +18,9 @@
 
 #define DELAY 5000
 
+#define NOSYNC 0
+#define MUTEX 1
+#define RWLOCK 2
 
 /*
  * Contains the name of the entry and respective i-number
