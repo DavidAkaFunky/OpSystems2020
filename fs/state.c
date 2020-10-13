@@ -8,10 +8,6 @@
 
 inode_t inode_table[INODE_TABLE_SIZE];
 
-extern pthread_mutex_t mutex;
-extern pthread_rwlock_t rwl;
-extern int syncStrategy;
-
 /*
  * Sleeps for synchronization testing.
  */
@@ -28,6 +24,7 @@ void inode_table_init() {
         inode_table[i].data.dirEntries = NULL;
         inode_table[i].data.fileContents = NULL;
     }
+    printf("%d\n", syncStrategy);
 }
 
 /*
@@ -248,6 +245,7 @@ void inode_print_tree(FILE *fp, int inumber, char *name) {
     }
 }
 
+//Locks the RWLock (read mode) or Mutex depending on the synchronisation strategy.
 void lock_read(int syncStrat){
 	if (syncStrat == RWLOCK)
 		pthread_rwlock_rdlock(&rwl);
@@ -256,6 +254,7 @@ void lock_read(int syncStrat){
 		pthread_mutex_lock(&mutex);
 }
 
+//Locks the RWLock (read+write mode) or Mutex depending on the synchronisation strategy.
 void lock_write(int syncStrat){
 	if (syncStrat == RWLOCK)
 		pthread_rwlock_wrlock(&rwl);
@@ -264,10 +263,18 @@ void lock_write(int syncStrat){
 		pthread_mutex_lock(&mutex);
 }
 
+//Unlocks the RWLock or Mutex depending on the synchronisation strategy.
 void unlock(int syncStrat){
 	if (syncStrat == RWLOCK)
 		pthread_rwlock_unlock(&rwl);
 
 	else if (syncStrat == MUTEX)
 		pthread_mutex_unlock(&mutex);
+}
+
+//Destroys the thread
+void destroySyncStructures(){
+    pthread_mutex_destroy(&mutex);
+    if (syncStrategy == RWLOCK)
+        pthread_rwlock_destroy(&rwl);
 }
