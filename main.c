@@ -17,7 +17,7 @@ char inputCommands[MAX_COMMANDS][MAX_INPUT_SIZE];
 int numberCommands = 0;
 int headQueue = 0;
 
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex;
 
 struct timeval  tv1, tv2;
 
@@ -30,10 +30,13 @@ int insertCommand(char* data) {
 }
 
 char* removeCommand() {
+    pthread_mutex_lock(&mutex);
     if(numberCommands > 0){
         numberCommands--;
+        pthread_mutex_unlock(&mutex);
         return inputCommands[headQueue++];  
     }
+    pthread_mutex_unlock(&mutex);
     return NULL;
 }
 
@@ -45,7 +48,7 @@ void errorParse() {
 void print_tecnicofs_tree_aux(char* outputPath) {
     FILE* fp = fopen(outputPath, "w");
     if (!fp) {
-        perror("Output path invalid, please try again!\n");
+        fprintf(stderr, "Output path invalid, please try again!\n");
         exit(EXIT_FAILURE);
     }
     print_tecnicofs_tree(fp);
@@ -104,7 +107,7 @@ void processInput(FILE* fp){
 void processInput_aux(char* inputPath) {
     FILE* fp = fopen(inputPath, "r");
     if (!fp) {
-        perror("Input path invalid, please try again!\n");
+        fprintf(stderr, "Input path invalid, please try again!\n");
         exit(EXIT_FAILURE);
     }
     processInput(fp);
@@ -121,10 +124,7 @@ void applyCommands() {
         char token, type;
         char name[MAX_INPUT_SIZE];
 
-        pthread_mutex_lock(&mutex);
         int numTokens = sscanf(command, "%c %s %c", &token, name, &type);
-        pthread_mutex_unlock(&mutex);
-        printf("Command: %s\n", command);
         if (numTokens < 2) {
             fprintf(stderr, "Error: invalid command in Queue\n");
             exit(EXIT_FAILURE);
@@ -174,24 +174,24 @@ void startThreadPool(char* numThreads, char* syncStrategy){
     int n = atoi(numThreads), i;
     
     if (n <= 0 || (n > 1 && !strcmp(syncStrategy, "nosync"))) {
-        perror("Error starting thread pool, please try again!\n");
+        fprintf(stderr, "Error starting thread pool, please try again!\n");
         exit(EXIT_FAILURE);
     }
 
     pthread_t tid[n];
     for (i = 0; i < n; i++){
         if(!pthread_create(&tid[i], NULL, (void*) applyCommands, NULL))
-            printf("Thread number %ld created successfully.\n", tid[i]);
+            printf("Thread number %d created successfully.\n", i);
         else
         {
-            perror("Thread not created!");
+            fprintf(stderr, "Thread not created!");
             exit(EXIT_FAILURE);
         }
     }
     /* wait for them to finish */
     for (i = 0; i < n; i++){
         if (pthread_join(tid[i], NULL) != 0) {
-            perror("Thread failed to join!");
+            fprintf(stderr, "Thread failed to join!");
             exit(EXIT_FAILURE);
         }
     }
@@ -201,12 +201,13 @@ void startThreadPool(char* numThreads, char* syncStrategy){
 int main(int argc, char* argv[]) {
     /* check argc */ 
     if (argc != 5) {
-        perror("Usage: ./tecnicofs inputfile outputfile numthreads synchstrategy\n");
+        fprintf(stderr, "Usage: ./tecnicofs inputfile outputfile numthreads synchstrategy\n");
         exit(EXIT_FAILURE);
     }
 
-    /* init filesystem */
+    /* init filesystem and dinamically initialize mutex */
     init_fs();
+    pthread_mutex_init(&mutex, NULL);
 
     /* process input and print tree */
     processInput_aux(argv[1]);
@@ -216,8 +217,9 @@ int main(int argc, char* argv[]) {
     applyCommands();
     print_tecnicofs_tree_aux(argv[2]);
 
-    /* release allocated memory */
+    /* release allocated memory and destroy mutex */
     destroy_fs();
+    pthread_mutex_destroy(&mutex);
 
     /* end the clock */
     gettimeofday(&tv2, NULL);
