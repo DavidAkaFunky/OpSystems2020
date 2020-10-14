@@ -274,3 +274,7 @@ int lookup(char *name) {
 void print_tecnicofs_tree(FILE *fp){
 	inode_print_tree(fp, FS_ROOT, "");
 }
+
+void destroy_locks() {
+	destroySyncStructures();
+}

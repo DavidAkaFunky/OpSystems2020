@@ -95,8 +95,10 @@ int inode_delete(int inumber) {
     lockWrite();
     inode_table[inumber].nodeType = T_NONE;
     /* see inode_table_destroy function */
-    if (inode_table[inumber].data.dirEntries)
+    /* ^^ -> it frees the dirEntries and fileContents (union) */
+    if (inode_table[inumber].data.dirEntries) {
         free(inode_table[inumber].data.dirEntries);
+    }
     unlock();
     return SUCCESS;
 }
@@ -143,7 +145,6 @@ int dir_reset_entry(int inumber, int sub_inumber) {
     /* Used for testing synchronization speedup */
     insert_delay(DELAY);
 
-    lockWrite();
     if ((inumber < 0) || (inumber > INODE_TABLE_SIZE) || (inode_table[inumber].nodeType == T_NONE)) {
         printf("inode_reset_entry: invalid inumber\n");
         return FAIL;
@@ -158,13 +159,13 @@ int dir_reset_entry(int inumber, int sub_inumber) {
         printf("inode_reset_entry: invalid entry inumber\n");
         return FAIL;
     }
-    /** 
-     * CRITICAL SECTION 
-     * */
+
+    lockWrite();
     for (int i = 0; i < MAX_DIR_ENTRIES; i++) {
         if (inode_table[inumber].data.dirEntries[i].inumber == sub_inumber) {
             inode_table[inumber].data.dirEntries[i].inumber = FREE_INODE;
             inode_table[inumber].data.dirEntries[i].name[0] = '\0';
+            unlock();
             return SUCCESS;
         }
     }
@@ -185,7 +186,10 @@ int dir_add_entry(int inumber, int sub_inumber, char *sub_name) {
     /* Used for testing synchronization speedup */
     insert_delay(DELAY);
 
-    //lockRead();
+    /**
+     * almost everything here is thread's stack comparison 
+     * no need to lock it here
+     * */
     if ((inumber < 0) || (inumber > INODE_TABLE_SIZE) || (inode_table[inumber].nodeType == T_NONE)) {
         printf("inode_add_entry: invalid inumber\n");
         return FAIL;
@@ -207,13 +211,13 @@ int dir_add_entry(int inumber, int sub_inumber, char *sub_name) {
     }
     for (int i = 0; i < MAX_DIR_ENTRIES; i++) {
         if (inode_table[inumber].data.dirEntries[i].inumber == FREE_INODE) {
+            lockWrite();
             inode_table[inumber].data.dirEntries[i].inumber = sub_inumber;
             strcpy(inode_table[inumber].data.dirEntries[i].name, sub_name);
-            //unlock();
+            unlock();
             return SUCCESS;
         }
     }
-    //unlock();
     return FAIL;
 }
 
@@ -225,9 +229,10 @@ int dir_add_entry(int inumber, int sub_inumber, char *sub_name) {
  *  - name: pointer to the name of current file/dir
  */
 void inode_print_tree(FILE *fp, int inumber, char *name) {
-    //lockWrite();
+    lockRead();
     if (inode_table[inumber].nodeType == T_FILE) {
         fprintf(fp, "%s\n", name);
+        unlock();
         return;
     }
 
@@ -239,41 +244,9 @@ void inode_print_tree(FILE *fp, int inumber, char *name) {
                 if (snprintf(path, sizeof(path), "%s/%s", name, inode_table[inumber].data.dirEntries[i].name) > sizeof(path)) {
                     fprintf(stderr, "truncation when building full path\n");
                 }
+                unlock();
                 inode_print_tree(fp, inode_table[inumber].data.dirEntries[i].inumber, path);
             }
         }
     }
-    //unlock();
-}
-
-// Locks the RWLock (read mode) or Mutex depending on the synchronisation strategy.
-void lockRead(){
-	if (syncStrategy == RWLOCK)
-		pthread_rwlock_rdlock(&rwl);
-	else if (syncStrategy == MUTEX)
-		pthread_mutex_lock(&mutex);
-}
-
-//Locks the RWLock (read+write mode) or Mutex depending on the synchronisation strategy.
-void lockWrite(){
-	if (syncStrategy == RWLOCK)
-		pthread_rwlock_wrlock(&rwl);
-	else if (syncStrategy == MUTEX)
-		pthread_mutex_lock(&mutex);
-}
-
-//Unlocks the RWLock or Mutex depending on the synchronization strategy.
-void unlock(){
-	if (syncStrategy == RWLOCK)
-		pthread_rwlock_unlock(&rwl);
-
-	else if (syncStrategy == MUTEX)
-		pthread_mutex_unlock(&mutex);
-}
-
-//Destroys the synchronization structures
-void destroySyncStructures(){
-    pthread_mutex_destroy(&mutex);
-    if (syncStrategy == RWLOCK)
-        pthread_rwlock_destroy(&rwl);
 }

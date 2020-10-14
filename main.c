@@ -251,9 +251,9 @@ int main(int argc, char* argv[]) {
     gettimeofday(&tv1, NULL);
     print_tecnicofs_tree_aux(argv[2]);
 
-    /* release allocated memory and destroy mutex */
-    destroySyncStructures();
+    /* release allocated memory and destroy sync structs */
     destroy_fs();
+    destroy_locks();
 
     /* end the clock */
     gettimeofday(&tv2, NULL);

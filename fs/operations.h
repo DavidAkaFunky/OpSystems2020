@@ -9,5 +9,6 @@ int create(char *name, type nodeType);
 int delete(char *name);
 int lookup(char *name);
 void print_tecnicofs_tree(FILE *fp);
+void destroy_locks();
 
 #endif /* FS_H */
