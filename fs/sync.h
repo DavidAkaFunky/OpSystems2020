@@ -10,6 +10,7 @@
 #define MUTEX 1
 #define RWLOCK 2
 
+pthread_mutex_t main_mutex;
 pthread_mutex_t mutex;
 pthread_rwlock_t rwl;
 int syncStrategy;

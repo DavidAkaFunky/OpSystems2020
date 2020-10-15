@@ -40,14 +40,14 @@ void lockWrite(){
 void unlock(){
 	if (syncStrategy == RWLOCK) {
 		if (pthread_rwlock_unlock(&rwl) != 0) {
-			fprintf(stderr, "Error unlocking with unlock() with RWLOCK!\n");
+			fprintf(stderr, "Error unlocking with unlock() using RWLOCK!\n");
 			exit(EXIT_FAILURE);
 		}
 	}
 
 	else if (syncStrategy == MUTEX) {
 		if (pthread_mutex_unlock(&mutex) != 0) {
-			fprintf(stderr, "Error unlocking with unlock() with MUTEX!\n");
+			fprintf(stderr, "Error unlocking with unlock() using MUTEX!\n");
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -60,10 +60,18 @@ void destroySyncStructures(){
 			fprintf(stderr, "Error destroying MUTEX!\n");
 			exit(EXIT_FAILURE);
 		}
+		if (pthread_mutex_destroy(&main_mutex) != 0) {
+			fprintf(stderr, "Error destroying command vector MUTEX!\n");
+			exit(EXIT_FAILURE);
+		}
 	}
     if (syncStrategy == RWLOCK) {
         if (pthread_rwlock_destroy(&rwl) != 0) {
-			fprintf(stderr, "Error destroying MUTEX!\n");
+			fprintf(stderr, "Error destroying RW LOCK!\n");
+			exit(EXIT_FAILURE);
+		}
+		if (pthread_mutex_destroy(&main_mutex) != 0) {
+			fprintf(stderr, "Error destroying command vector MUTEX!\n");
 			exit(EXIT_FAILURE);
 		}
 	}

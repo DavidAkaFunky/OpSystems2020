@@ -78,9 +78,11 @@ void validateArguments(char* numThreads, char* syncStrat){
         if (!strcmp(syncStrat, validStrats[i])){
             switch (i) {
                 case MUTEX:
+                    pthread_mutex_init(&main_mutex, NULL);
                     pthread_mutex_init(&mutex, NULL);
                     break;
                 case RWLOCK:
+                    pthread_mutex_init(&main_mutex, NULL);
                     pthread_rwlock_init(&rwl, NULL);
                     break;
             }
@@ -242,10 +244,8 @@ int main(int argc, char* argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    /* init filesystem and dinamically initialize mutex */
+    /* init filesystem and dinamically initialize mutex if needed */
     init_fs();
-    pthread_mutex_init(&main_mutex, NULL);
-
     validateArguments(argv[3], argv[4]);
 
     /* process input and print tree */
@@ -256,9 +256,8 @@ int main(int argc, char* argv[]) {
     gettimeofday(&tv1, NULL);
     print_tecnicofs_tree_aux(argv[2]);
 
-    /* release allocated memory and destroy sync structs */
+    /* release allocated memory and destroy sync structs if needed*/
     destroy_fs();
-    pthread_mutex_destroy(&main_mutex);
     destroy_locks();
 
     /* end the clock */
