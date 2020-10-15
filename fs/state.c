@@ -229,10 +229,8 @@ int dir_add_entry(int inumber, int sub_inumber, char *sub_name) {
  *  - name: pointer to the name of current file/dir
  */
 void inode_print_tree(FILE *fp, int inumber, char *name) {
-    lockRead();
     if (inode_table[inumber].nodeType == T_FILE) {
         fprintf(fp, "%s\n", name);
-        unlock();
         return;
     }
 
@@ -244,7 +242,6 @@ void inode_print_tree(FILE *fp, int inumber, char *name) {
                 if (snprintf(path, sizeof(path), "%s/%s", name, inode_table[inumber].data.dirEntries[i].name) > sizeof(path)) {
                     fprintf(stderr, "truncation when building full path\n");
                 }
-                unlock();
                 inode_print_tree(fp, inode_table[inumber].data.dirEntries[i].inumber, path);
             }
         }

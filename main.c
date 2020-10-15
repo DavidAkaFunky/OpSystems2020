@@ -17,6 +17,8 @@ char inputCommands[MAX_COMMANDS][MAX_INPUT_SIZE];
 int numberCommands = 0;
 int headQueue = 0;
 
+pthread_mutex_t main_mutex;
+
 struct timeval tv1, tv2;
 
 int insertCommand(char* data) {
@@ -28,13 +30,13 @@ int insertCommand(char* data) {
 }
 
 char* removeCommand() {
-    pthread_mutex_lock(&mutex);
+    pthread_mutex_lock(&main_mutex);
     if(numberCommands > 0){
         numberCommands--;
-        pthread_mutex_unlock(&mutex);
+        pthread_mutex_unlock(&main_mutex);
         return inputCommands[headQueue++];  
     }
-    pthread_mutex_unlock(&mutex);
+    pthread_mutex_unlock(&main_mutex);
     return NULL;
 }
 
@@ -74,8 +76,16 @@ void validateArguments(char* numThreads, char* syncStrat){
     /* process input strategy */
     for (i = 0; i < 3; i++) {
         if (!strcmp(syncStrat, validStrats[i])){
-            if (i == RWLOCK)
-                pthread_rwlock_init(&rwl, NULL);
+            switch (i) {
+                case MUTEX:
+                    pthread_mutex_init(&mutex, NULL);
+                    break;
+                case RWLOCK:
+                    pthread_rwlock_init(&rwl, NULL);
+                    break;
+                default:
+                    break;
+            }
             syncStrategy = i;
             validStrat++;
             break;
@@ -239,7 +249,7 @@ int main(int argc, char* argv[]) {
 
     /* init filesystem and dinamically initialize mutex */
     init_fs();
-    pthread_mutex_init(&mutex, NULL);
+    pthread_mutex_init(&main_mutex, NULL);
 
     validateArguments(argv[3], argv[4]);
 
@@ -253,6 +263,7 @@ int main(int argc, char* argv[]) {
 
     /* release allocated memory and destroy sync structs */
     destroy_fs();
+    pthread_mutex_destroy(&main_mutex);
     destroy_locks();
 
     /* end the clock */

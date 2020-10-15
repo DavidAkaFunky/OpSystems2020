@@ -10,19 +10,13 @@
 #define MUTEX 1
 #define RWLOCK 2
 
-#define TECNICOFS_ERROR_LOCK_READ -1
-#define TECNICOFS_ERROR_LOCK_WRITE -2
-#define TECNICOFS_ERROR_UNLOCK -3
-#define TECNICOFS_ERROR_MUTEX_DESTROY -4
-#define TECNICOFS_ERROR_RWLOCK_DESTROY -5
-
 pthread_mutex_t mutex;
 pthread_rwlock_t rwl;
 int syncStrategy;
 
-int lockRead();
-int lockWrite();
-int unlock();
-int destroySyncStructures();
+void lockRead();
+void lockWrite();
+void unlock();
+void destroySyncStructures();
 
 #endif

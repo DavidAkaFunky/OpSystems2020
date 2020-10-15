@@ -5,68 +5,66 @@
 #include <pthread.h>
 
 // Locks the RWLock (read mode) or Mutex depending on the synchronisation strategy.
-int lockRead(){
+void lockRead(){
 	if (syncStrategy == RWLOCK) {
 		if (pthread_rwlock_rdlock(&rwl) != 0) {
 			fprintf(stderr, "Error locking with lockRead() with RWLOCK!\n");
-			return TECNICOFS_ERROR_LOCK_READ;
+			exit(EXIT_FAILURE);
 		}
 	}
 	else if (syncStrategy == MUTEX) {
 		if(pthread_mutex_lock(&mutex) != 0) {
 			fprintf(stderr, "Error locking with lockRead() with MUTEX!\n");
-			return TECNICOFS_ERROR_LOCK_READ;
+			exit(EXIT_FAILURE);		
 		}
 	}
-	return EXIT_SUCCESS;
 }
 
 // Locks the RWLock (read+write mode) or Mutex depending on the synchronisation strategy.
-int lockWrite(){
+void lockWrite(){
 	if (syncStrategy == RWLOCK) {
 		if (pthread_rwlock_wrlock(&rwl) != 0) {
 			fprintf(stderr, "Error locking with lockWrite() with RWLOCK!\n");
-			return TECNICOFS_ERROR_LOCK_WRITE;
+			exit(EXIT_FAILURE);
 		}
 	}
 	else if (syncStrategy == MUTEX) {
 		if (pthread_mutex_lock(&mutex) != 0) {
 			fprintf(stderr, "Error locking with lockWrite() with MUTEX!\n");
-			return TECNICOFS_ERROR_LOCK_WRITE;
+			exit(EXIT_FAILURE);
 		}
 	}
-	return EXIT_SUCCESS;
 }
 
 // Unlocks the RWLock or Mutex depending on the synchronization strategy.
-int unlock(){
+void unlock(){
 	if (syncStrategy == RWLOCK) {
 		if (pthread_rwlock_unlock(&rwl) != 0) {
 			fprintf(stderr, "Error unlocking with unlock() with RWLOCK!\n");
-			return TECNICOFS_ERROR_UNLOCK;
+			exit(EXIT_FAILURE);
 		}
 	}
 
 	else if (syncStrategy == MUTEX) {
 		if (pthread_mutex_unlock(&mutex) != 0) {
 			fprintf(stderr, "Error unlocking with unlock() with MUTEX!\n");
-			return TECNICOFS_ERROR_UNLOCK;
+			exit(EXIT_FAILURE);
 		}
 	}
-	return EXIT_SUCCESS;
 }
 
 // Destroys the synchronization structures
-int destroySyncStructures(){
-    if (pthread_mutex_destroy(&mutex) != 0) {
-		fprintf(stderr, "Error destroying MUTEX!\n");
-		return TECNICOFS_ERROR_MUTEX_DESTROY;
+void destroySyncStructures(){
+	if (syncStrategy == MUTEX) {
+    	if (pthread_mutex_destroy(&mutex) != 0) {
+			fprintf(stderr, "Error destroying MUTEX!\n");
+			exit(EXIT_FAILURE);
+		}
 	}
     if (syncStrategy == RWLOCK) {
         if (pthread_rwlock_destroy(&rwl) != 0) {
 			fprintf(stderr, "Error destroying MUTEX!\n");
-			return TECNICOFS_ERROR_RWLOCK_DESTROY;
+			exit(EXIT_FAILURE);
 		}
 	}
-	return EXIT_SUCCESS;
 }
