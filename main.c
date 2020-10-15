@@ -83,8 +83,6 @@ void validateArguments(char* numThreads, char* syncStrat){
                 case RWLOCK:
                     pthread_rwlock_init(&rwl, NULL);
                     break;
-                default:
-                    break;
             }
             syncStrategy = i;
             validStrat++;
