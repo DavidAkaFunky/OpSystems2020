@@ -219,10 +219,7 @@ void startThreadPool(){
     pthread_t tid[numberThreads];
     /* main thread will be responsible */
     for (i = 0; i < numberThreads; i++){
-        if(!pthread_create(&tid[i], NULL, (void*) applyCommands, NULL))
-            printf("Thread number %d created successfully.\n", i);
-        else
-        {
+        if (pthread_create(&tid[i], NULL, (void*) applyCommands, NULL) != 0){
             fprintf(stderr, "Thread not created!");
             exit(EXIT_FAILURE);
         }
