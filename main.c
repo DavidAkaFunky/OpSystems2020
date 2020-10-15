@@ -220,14 +220,14 @@ void startThreadPool(){
     /* main thread will be responsible */
     for (i = 0; i < numberThreads; i++){
         if (pthread_create(&tid[i], NULL, (void*) applyCommands, NULL) != 0){
-            fprintf(stderr, "Thread not created!");
+            fprintf(stderr, "Thread not created!\n");
             exit(EXIT_FAILURE);
         }
     }
     /* wait for them to finish */
     for (i = 0; i < numberThreads; i++){
         if (pthread_join(tid[i], NULL) != 0) {
-            fprintf(stderr, "Thread failed to join!");
+            fprintf(stderr, "Thread failed to join!\n");
             exit(EXIT_FAILURE);
         }
     }
