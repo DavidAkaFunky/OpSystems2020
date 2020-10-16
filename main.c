@@ -42,6 +42,10 @@ void errorParse() {
     exit(EXIT_FAILURE);
 }
 
+/* 
+ * Tries creating a new file (overwriting the original content
+ * if already existing), print the FS tree, and close it.
+ */
 void print_tecnicofs_tree_aux(char* outputPath) {
     FILE* fp = fopen(outputPath, "w");
     if (!fp) {
@@ -146,6 +150,10 @@ void processInput(FILE* fp){
     }
 }
 
+/* 
+ * Checks if the file exists, processes 
+ * each line of commands, and closes it. 
+ */
 void processInput_aux(char* inputPath) {
     FILE* fp = fopen(inputPath, "r");
     if (!fp) {
@@ -222,7 +230,6 @@ void applyCommands() {
 /*
  * Initializes the thread pool.
  */
-
 void startThreadPool(){
     int i;
     pthread_t tid[numberThreads];
