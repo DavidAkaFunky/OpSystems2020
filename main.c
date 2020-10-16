@@ -30,13 +30,10 @@ int insertCommand(char* data) {
 }
 
 char* removeCommand() {
-    pthread_mutex_lock(&main_mutex);
     if(numberCommands > 0){
         numberCommands--;
-        pthread_mutex_unlock(&main_mutex);
         return inputCommands[headQueue++];  
     }
-    pthread_mutex_unlock(&main_mutex);
     return NULL;
 }
 
@@ -161,8 +158,10 @@ void processInput_aux(char* inputPath) {
 }
 
 void applyCommands() {
+    pthread_mutex_lock(&main_mutex);
     while (numberCommands > 0){
         const char* command = removeCommand();
+        pthread_mutex_unlock(&main_mutex);
         if (command == NULL){
             continue;
         }
@@ -194,7 +193,9 @@ void applyCommands() {
                 }
                 break;
             case 'l':
+                lockRead();
                 searchResult = lookup(name);
+                unlock();
                 if (searchResult >= 0)
                     printf("Search: %s found\n", name);
                 else
@@ -209,7 +210,9 @@ void applyCommands() {
                 exit(EXIT_FAILURE);
             }
         }
+        pthread_mutex_lock(&main_mutex);
     }
+    pthread_mutex_unlock(&main_mutex);
 }
 
 /*
