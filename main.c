@@ -30,13 +30,10 @@ int insertCommand(char* data) {
 }
 
 char* removeCommand() {
-    pthread_mutex_lock(&main_mutex);
     if(numberCommands > 0){
         numberCommands--;
-        pthread_mutex_unlock(&main_mutex);
         return inputCommands[headQueue++];  
     }
-    pthread_mutex_unlock(&main_mutex);
     return NULL;
 }
 
@@ -161,6 +158,7 @@ void processInput_aux(char* inputPath) {
 }
 
 void applyCommands() {
+    pthread_mutex_lock(&main_mutex);
     while (numberCommands > 0){
         const char* command = removeCommand();
         if (command == NULL){
@@ -181,12 +179,16 @@ void applyCommands() {
             case 'c':
                 switch (type) {
                     case 'f':
+                        lockWrite();
                         printf("Create file: %s\n", name);
                         create(name, T_FILE);
+                        unlock();
                         break;
                     case 'd':
+                        lockWrite();
                         printf("Create directory: %s\n", name);
                         create(name, T_DIRECTORY);
+                        unlock();
                         break;
                     default:
                         fprintf(stderr, "Error: invalid node type\n");
@@ -194,15 +196,19 @@ void applyCommands() {
                 }
                 break;
             case 'l':
+                lockRead();
                 searchResult = lookup(name);
                 if (searchResult >= 0)
                     printf("Search: %s found\n", name);
                 else
                     printf("Search: %s not found\n", name);
+                unlock();
                 break;
             case 'd':
+                lockWrite();
                 printf("Delete: %s\n", name);
                 delete(name);
+                unlock();
                 break;
             default: { /* error */
                 fprintf(stderr, "Error: command to apply\n");
@@ -210,6 +216,7 @@ void applyCommands() {
             }
         }
     }
+    pthread_mutex_unlock(&main_mutex);
 }
 
 /*
