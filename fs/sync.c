@@ -4,7 +4,10 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-// Locks the RWLock (read mode) or Mutex depending on the synchronisation strategy.
+/* 
+ * Locks the RWLock (read mode) or Mutex
+ * depending on the synchronisation strategy.
+ */
 void lockRead(){
 	if (syncStrategy == RWLOCK) {
 		if (pthread_rwlock_rdlock(&rwl) != 0) {
@@ -20,7 +23,10 @@ void lockRead(){
 	}
 }
 
-// Locks the RWLock (read+write mode) or Mutex depending on the synchronisation strategy.
+/*
+ * Locks the RWLock (read+write mode) or Mutex
+ * depending on the synchronisation strategy.
+ */
 void lockWrite(){
 	if (syncStrategy == RWLOCK) {
 		if (pthread_rwlock_wrlock(&rwl) != 0) {
@@ -36,7 +42,10 @@ void lockWrite(){
 	}
 }
 
-// Unlocks the RWLock or Mutex depending on the synchronization strategy.
+/* 
+ * Unlocks the RWLock or Mutex depending
+ * on the synchronization strategy.
+ */
 void unlock(){
 	if (syncStrategy == RWLOCK) {
 		if (pthread_rwlock_unlock(&rwl) != 0) {
@@ -53,7 +62,9 @@ void unlock(){
 	}
 }
 
-// Destroys the synchronization structures
+/*
+ * Destroys the synchronization structures.
+ */
 void destroySyncStructures(){
 	if (syncStrategy == MUTEX) {
     	if (pthread_mutex_destroy(&mutex) != 0) {

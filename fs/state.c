@@ -29,7 +29,6 @@ void inode_table_init() {
 /*
  * Releases the allocated memory for the i-nodes tables.
  */
-
 void inode_table_destroy() {
     for (int i = 0; i < INODE_TABLE_SIZE; i++) {
         if (inode_table[i].nodeType != T_NONE) {
