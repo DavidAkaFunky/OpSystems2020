@@ -29,7 +29,7 @@ main.o: main.c fs/operations.h fs/state.h fs/sync.h tecnicofs-api-constants.h
 
 clean:
 	@echo Cleaning...
-	rm -f fs/*.o *.o *.out tecnicofs
+	rm -f *.zip fs/*.o *.o *.out tecnicofs
 
 run: tecnicofs
 	./tecnicofs

@@ -17,8 +17,6 @@ char inputCommands[MAX_COMMANDS][MAX_INPUT_SIZE];
 int numberCommands = 0;
 int headQueue = 0;
 
-pthread_mutex_t main_mutex;
-
 struct timeval tv1, tv2;
 
 int insertCommand(char* data) {
@@ -42,65 +40,30 @@ void errorParse() {
     exit(EXIT_FAILURE);
 }
 
-/* 
- * Tries creating a new file (overwriting the original content
- * if already existing), print the FS tree, and close it.
- */
-void print_tecnicofs_tree_aux(char* outputPath) {
-    FILE* fp = fopen(outputPath, "w");
-    if (!fp) {
-        fprintf(stderr, "Output path invalid, please try again!\n");
-        exit(EXIT_FAILURE);
-    }
-    print_tecnicofs_tree(fp);
-    fclose(fp);
-}
-
-void validateArguments(char* numThreads, char* syncStrat){
-    int n = atoi(numThreads), i, validStrat = 0;
-    const char* validStrats[] = {"nosync", "mutex", "rwlock"};
-
+void validateNumThreads(char* numThreads){
+    int n = atoi(numThreads);
     /* atoi error */
     if (n <= 0) {
         fprintf(stderr, "Error starting thread pool, please try again!\n");
         exit(EXIT_FAILURE);
     }
-    
-    /* nosync with multiple thread error */
-    if (n > 1 && !strcmp(syncStrat, "nosync")) {
-        fprintf(stderr, "Error starting thread pool, please try again!\n");
-        exit(EXIT_FAILURE);
-    }
-
     numberThreads = n;
-
-    /* process input strategy */
-    for (i = 0; i < 3; i++) {
-        if (!strcmp(syncStrat, validStrats[i])){
-            switch (i) {
-                case MUTEX:
-                    pthread_mutex_init(&main_mutex, NULL);
-                    pthread_mutex_init(&mutex, NULL);
-                    break;
-                case RWLOCK:
-                    pthread_mutex_init(&main_mutex, NULL);
-                    pthread_rwlock_init(&rwl, NULL);
-                    break;
-            }
-            syncStrategy = i;
-            validStrat++;
-            break;
-        }
-    }
-
-    /* input syncronization strategy is invalid */
-    if (!validStrat){
-        fprintf(stderr, "Invalid synchronization strategy, please try again!\n");
-        exit(EXIT_FAILURE);
-    }
-    
 }
 
+/* 
+ * Checks if the file exists, processes 
+ * each line of commands, and closes it. 
+ */
+void processInput_aux(char* inputPath) {
+    FILE* fp = fopen(inputPath, "r");
+    if (!fp) {
+        fprintf(stderr, "Input path invalid, please try again!\n");
+        exit(EXIT_FAILURE);
+    }
+    
+    processInput(fp);
+    fclose(fp);
+}
 
 void processInput(FILE* fp){
     char line[MAX_INPUT_SIZE];
@@ -150,23 +113,7 @@ void processInput(FILE* fp){
     }
 }
 
-/* 
- * Checks if the file exists, processes 
- * each line of commands, and closes it. 
- */
-void processInput_aux(char* inputPath) {
-    FILE* fp = fopen(inputPath, "r");
-    if (!fp) {
-        fprintf(stderr, "Input path invalid, please try again!\n");
-        exit(EXIT_FAILURE);
-    }
-    
-    processInput(fp);
-    fclose(fp);
-}
-
 void applyCommands() {
-    pthread_mutex_lock(&main_mutex);
     while (numberCommands > 0){
         const char* command = removeCommand();
         if (command == NULL){
@@ -174,29 +121,28 @@ void applyCommands() {
         }
 
         char token, type;
-        char name[MAX_INPUT_SIZE];
+        char name[MAX_INPUT_SIZE], argument[MAX_INPUT_SIZE];
 
-        int numTokens = sscanf(command, "%c %s %c", &token, name, &type);
+        int numTokens = sscanf(command, "%c %s %s", &token, name, argument);
         if (numTokens < 2) {
             fprintf(stderr, "Error: invalid command in Queue\n");
             exit(EXIT_FAILURE);
         }
-
+        if (strlen(argument) == 1) {
+            type = (char) argument;
+        }
+        
         int searchResult;
         switch (token) {
             case 'c':
                 switch (type) {
                     case 'f':
-                        lockWrite();
                         printf("Create file: %s\n", name);
                         create(name, T_FILE);
-                        unlock();
                         break;
                     case 'd':
-                        lockWrite();
                         printf("Create directory: %s\n", name);
                         create(name, T_DIRECTORY);
-                        unlock();
                         break;
                     default:
                         fprintf(stderr, "Error: invalid node type\n");
@@ -204,19 +150,15 @@ void applyCommands() {
                 }
                 break;
             case 'l':
-                lockRead();
                 searchResult = lookup(name);
                 if (searchResult >= 0)
                     printf("Search: %s found\n", name);
                 else
                     printf("Search: %s not found\n", name);
-                unlock();
                 break;
             case 'd':
-                lockWrite();
                 printf("Delete: %s\n", name);
                 delete(name);
-                unlock();
                 break;
             default: { /* error */
                 fprintf(stderr, "Error: command to apply\n");
@@ -224,7 +166,6 @@ void applyCommands() {
             }
         }
     }
-    pthread_mutex_unlock(&main_mutex);
 }
 
 /*
@@ -250,17 +191,31 @@ void startThreadPool(){
 
 }
 
+/* 
+ * Tries creating a new file (overwriting the original content
+ * if already existing), print the FS tree, and close it.
+ */
+void print_tecnicofs_tree_aux(char* outputPath) {
+    FILE* fp = fopen(outputPath, "w");
+    if (!fp) {
+        fprintf(stderr, "Output path invalid, please try again!\n");
+        exit(EXIT_FAILURE);
+    }
+    print_tecnicofs_tree(fp);
+    fclose(fp);
+}
+
 int main(int argc, char* argv[]) {
     
     /* check argc */ 
     if (argc != 5) {
-        fprintf(stderr, "Usage: ./tecnicofs inputfile outputfile numthreads synchstrategy\n");
+        fprintf(stderr, "Usage: ./tecnicofs inputfile outputfile numthreads\n");
         exit(EXIT_FAILURE);
     }
 
     /* init filesystem and dinamically initialize mutex if needed */
     init_fs();
-    validateArguments(argv[3], argv[4]);
+    validateNumThreads(argv[3]);
 
     /* process input and print tree */
     processInput_aux(argv[1]);
@@ -270,9 +225,8 @@ int main(int argc, char* argv[]) {
     gettimeofday(&tv1, NULL);
     print_tecnicofs_tree_aux(argv[2]);
 
-    /* release allocated memory and destroy sync structs if needed*/
+    /* release allocated memory */
     destroy_fs();
-    destroy_locks();
 
     /* end the clock */
     gettimeofday(&tv2, NULL);

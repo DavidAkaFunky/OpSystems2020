@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include "../tecnicofs-api-constants.h"
-#include "sync.h"
 
 /* FS root inode number */
 #define FS_ROOT 0
@@ -41,6 +40,7 @@ union Data {
 typedef struct inode_t {    
 	type nodeType;
 	union Data data;
+	pthread_rwlock_t rwl; /* Trinco fino */
     /* more i-node attributes will be added in future exercises */
 } inode_t;
 
