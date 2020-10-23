@@ -44,25 +44,10 @@ void validateNumThreads(char* numThreads){
     int n = atoi(numThreads);
     /* atoi error */
     if (n <= 0) {
-        fprintf(stderr, "Error starting thread pool, please try again!\n");
+        fprintf(stderr, "Invalid input of numThreads!\n");
         exit(EXIT_FAILURE);
     }
     numberThreads = n;
-}
-
-/* 
- * Checks if the file exists, processes 
- * each line of commands, and closes it. 
- */
-void processInput_aux(char* inputPath) {
-    FILE* fp = fopen(inputPath, "r");
-    if (!fp) {
-        fprintf(stderr, "Input path invalid, please try again!\n");
-        exit(EXIT_FAILURE);
-    }
-    
-    processInput(fp);
-    fclose(fp);
 }
 
 void processInput(FILE* fp){
@@ -113,6 +98,20 @@ void processInput(FILE* fp){
     }
 }
 
+/* 
+ * Checks if the file exists, processes 
+ * each line of commands, and closes it. 
+ */
+void processInput_aux(char* inputPath) {
+    FILE* fp = fopen(inputPath, "r");
+    if (!fp) {
+        fprintf(stderr, "Input path invalid, please try again!\n");
+        exit(EXIT_FAILURE);
+    }
+    processInput(fp);
+    fclose(fp);
+}
+
 void applyCommands() {
     while (numberCommands > 0){
         const char* command = removeCommand();
@@ -121,15 +120,12 @@ void applyCommands() {
         }
 
         char token, type;
-        char name[MAX_INPUT_SIZE], argument[MAX_INPUT_SIZE];
+        char name[MAX_INPUT_SIZE];
 
-        int numTokens = sscanf(command, "%c %s %s", &token, name, argument);
+        int numTokens = sscanf(command, "%c %s %c", &token, name, &type);
         if (numTokens < 2) {
             fprintf(stderr, "Error: invalid command in Queue\n");
             exit(EXIT_FAILURE);
-        }
-        if (strlen(argument) == 1) {
-            type = (char) argument;
         }
         
         int searchResult;
@@ -208,7 +204,7 @@ void print_tecnicofs_tree_aux(char* outputPath) {
 int main(int argc, char* argv[]) {
     
     /* check argc */ 
-    if (argc != 5) {
+    if (argc != 4) {
         fprintf(stderr, "Usage: ./tecnicofs inputfile outputfile numthreads\n");
         exit(EXIT_FAILURE);
     }
