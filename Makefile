@@ -24,9 +24,10 @@ fs/operations.o: fs/operations.c fs/operations.h fs/state.h tecnicofs-api-consta
 main.o: main.c fs/operations.h fs/state.h tecnicofs-api-constants.h
 	$(CC) $(CFLAGS) -o main.o -c main.c
 
+# Delete outputs/*.txt
 clean:
 	@echo Cleaning...
-	rm -f *.zip fs/*.o *.o *.out tecnicofs
+	rm -f *.zip fs/*.o *.o *.out tecnicofs outputs/*.txt
 
 run: tecnicofs
 	./tecnicofs

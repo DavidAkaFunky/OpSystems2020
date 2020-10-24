@@ -1,5 +1,6 @@
 #!/bin/bash
 mkdir -p $2
+make
 for i in $(seq 1 $3);
 do
     for file in "$1"/*; 

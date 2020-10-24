@@ -177,27 +177,38 @@ int dir_add_entry(int inumber, int sub_inumber, char *sub_name) {
     /* Used for testing synchronization speedup */
     insert_delay(DELAY);
     
+    /* invalid parent inumber */
     if ((inumber < 0) || (inumber > INODE_TABLE_SIZE) || (inode_table[inumber].nodeType == T_NONE)) {
         printf("inode_add_entry: invalid inumber\n");
         return FAIL;
     }
 
+    /* parent is not a directory */
     if (inode_table[inumber].nodeType != T_DIRECTORY) {
         printf("inode_add_entry: can only add entry to directories\n");
         return FAIL;
     }
 
+    /* invalid child inumber */
+    /* at this point, nodeType is already set at nType */
     if ((sub_inumber < 0) || (sub_inumber > INODE_TABLE_SIZE) || (inode_table[sub_inumber].nodeType == T_NONE)) {
         printf("inode_add_entry: invalid entry inumber\n");
         return FAIL;
     }
+
+    /* invalid sub_name */
     if (strlen(sub_name) == 0 ) {
         printf("inode_add_entry: \
                entry name must be non-empty\n");
         return FAIL;
     }
+
+    /* iterate through table */
     for (int i = 0; i < MAX_DIR_ENTRIES; i++) {
+        /* find first entry which is free */
         if (inode_table[inumber].data.dirEntries[i].inumber == FREE_INODE) {
+            /* update its data */
+            /* dirEntry is composed of name and i-number */
             inode_table[inumber].data.dirEntries[i].inumber = sub_inumber;
             strcpy(inode_table[inumber].data.dirEntries[i].name, sub_name);
             return SUCCESS;
@@ -205,6 +216,49 @@ int dir_add_entry(int inumber, int sub_inumber, char *sub_name) {
     }
     return FAIL;
 }
+
+int lockRead(int inumber) {
+    for (int i = 0; i < MAX_DIR_ENTRIES; ++i) {
+        if (i == inumber) {
+            if (pthread_rwlock_init(&inode_table[i].rwl, NULL)) { return FAIL; }
+            if (pthread_rwlock_rdlock(&inode_table[i].rwl)) { return FAIL; }
+            printf("I just lockRead(%d)!\n", i);
+        }
+    }
+    return SUCCESS;
+}
+
+int unlockRead(int inumbers[], int size) {
+    for (int i = 0; i < size; ++i) {
+        printf ("About to unlock %d\n", i);
+        if (pthread_rwlock_unlock(&inode_table[inumbers[i]].rwl)) { return FAIL; }
+        if (pthread_rwlock_destroy(&inode_table[inumbers[i]].rwl)) { return FAIL; }
+        printf("I just unlockRead(%d)!\n", i);
+    }
+    return SUCCESS;
+}
+
+int lockWrite(int inumber) {
+    for (int i = 0; i < MAX_DIR_ENTRIES; ++i) {
+        if (i == inumber) {
+            if (pthread_rwlock_init(&inode_table[i].rwl, NULL)) { return FAIL; }
+            if (pthread_rwlock_wrlock(&inode_table[i].rwl)) { return FAIL; }
+            printf("I just lockWrite(%d)!\n", i);
+        }
+    }
+    return SUCCESS;
+}
+
+int unlockWrite(int inumbers[], int size) {
+    for (int i = 0; i < size; ++i) {
+        printf ("About to unlock %d\n", i);
+        if (pthread_rwlock_unlock(&inode_table[inumbers[i]].rwl)) { return FAIL; }
+        if (pthread_rwlock_destroy(&inode_table[inumbers[i]].rwl)) { return FAIL; }
+        printf("I just unlockWrite(%d)!\n", i);
+    }
+    return SUCCESS;
+}
+
 
 
 /*

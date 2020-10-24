@@ -54,6 +54,10 @@ int inode_get(int inumber, type *nType, union Data *data);
 int inode_set_file(int inumber, char *fileContents, int len);
 int dir_reset_entry(int inumber, int sub_inumber);
 int dir_add_entry(int inumber, int sub_inumber, char *sub_name);
+int lockRead(int inumber);
+int unlockRead(int inumbers[], int size);
+int lockWrite(int inumber);
+int unlockWrite(int inumbers[], int size);
 void inode_print_tree(FILE *fp, int inumber, char *name);
 
 #endif /* INODES_H */
