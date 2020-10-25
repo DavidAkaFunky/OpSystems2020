@@ -11,13 +11,50 @@
 #define MAX_COMMANDS 150000
 #define MAX_INPUT_SIZE 100
 
-int numberThreads = 0;
+// Consumidor = insertCommand
+// Produtor = removeCommand
 
-char inputCommands[MAX_COMMANDS][MAX_INPUT_SIZE];
+int numberThreads = 0;
 int numberCommands = 0;
 int headQueue = 0;
 
+char inputCommands[MAX_COMMANDS][MAX_INPUT_SIZE];
+
 struct timeval tv1, tv2;
+pthread_mutex_t main_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+/* 
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t condIns = PTHREAD_COND_INITIALIZER, condRem = PTHREAD_COND_INITIALIZER;
+int counter = 0;
+int condptr = 0, condrem = 0;
+*/
+
+/* 
+void insertCommand(char* data) {
+    pthread_mutex_lock(&mutex);
+    while (counter == MAX_COMMANDS) pthread_cond_wait(&condIns, &mutex);
+    strcpy(inputCommands[condptr++], data);
+    if (condptr == MAX_COMMANDS) condptr = 0;
+    counter++;
+    pthread_cond_signal(&condRem);
+    pthread_mutex_unlock(&mutex);
+}
+*/
+
+/* 
+void removeCommand(char* cmd) {
+    pthread_mutex_lock(&mutex);
+    while (counter == 0) pthread_cond_wait(&condRem, &mutex);
+    cmd = inputCommands[condrem];
+    puts(cmd);
+    condrem++;
+    if (condrem == MAX_COMMANDS) condrem = 0;
+    counter--;
+    pthread_cond_signal(&condIns);
+    pthread_mutex_unlock(&mutex);
+}
+*/
 
 int insertCommand(char* data) {
     if(numberCommands != MAX_COMMANDS) {
@@ -113,7 +150,9 @@ void processInput_aux(char* inputPath) {
 }
 
 void applyCommands() {
+    pthread_mutex_lock(&main_mutex);
     while (numberCommands > 0){
+        pthread_mutex_unlock(&main_mutex);
         const char* command = removeCommand();
         if (command == NULL){
             continue;
@@ -147,7 +186,7 @@ void applyCommands() {
                 break;
             case 'l':
                 printf("Searching %s...\n", name);
-                searchResult = lookup(name);
+                searchResult = lookup(name, READ);
                 if (searchResult >= 0)
                     printf("Search: %s found\n", name);
                 else
@@ -162,8 +201,11 @@ void applyCommands() {
                 exit(EXIT_FAILURE);
             }
         }
+        pthread_mutex_lock(&main_mutex);
     }
+    pthread_mutex_unlock(&main_mutex);
 }
+
 
 /*
  * Initializes the thread pool.
@@ -224,6 +266,7 @@ int main(int argc, char* argv[]) {
 
     /* release allocated memory */
     destroy_fs();
+    pthread_mutex_destroy(&main_mutex);
 
     /* end the clock */
     gettimeofday(&tv2, NULL);

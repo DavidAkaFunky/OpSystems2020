@@ -55,6 +55,7 @@ int inode_create(type nType) {
     insert_delay(DELAY);
 
     for (int inumber = 0; inumber < INODE_TABLE_SIZE; inumber++) {
+        lockWrite(inumber);
         if (inode_table[inumber].nodeType == T_NONE) {
             inode_table[inumber].nodeType = nType;
             if (nType == T_DIRECTORY) {
@@ -68,6 +69,7 @@ int inode_create(type nType) {
             }
             return inumber;
         }
+        unlock(inumber);
     }
     return FAIL;
 }
@@ -217,46 +219,67 @@ int dir_add_entry(int inumber, int sub_inumber, char *sub_name) {
     return FAIL;
 }
 
-int lockRead(int inumber) {
-    for (int i = 0; i < MAX_DIR_ENTRIES; ++i) {
-        if (i == inumber) {
-            if (pthread_rwlock_init(&inode_table[i].rwl, NULL)) { return FAIL; }
-            if (pthread_rwlock_rdlock(&inode_table[i].rwl)) { return FAIL; }
-            printf("I just lockRead(%d)!\n", i);
-        }
+/**
+ * Wrapper to lock i-node given its inumber
+ * and depending on lockType, it'll lock on read or 
+ * write.
+ */
+void lock(int inumber, int lockType) {
+    if (lockType == READ) {
+        lockRead(inumber);
     }
-    return SUCCESS;
+    else if (lockType == WRITE) {
+        lockWrite(inumber);
+    }
 }
 
-int unlockRead(int inumbers[], int size) {
+void lockRead(int inumber) {
+    if (pthread_rwlock_init(&inode_table[inumber].rwl, NULL)) { 
+        fprintf(stderr, "Error initializing lockRead() rwl!\n");
+        exit(EXIT_FAILURE);
+    }
+    else { printf("Sucessfully initialized lockRead() inode %d!\n", inumber); }
+    if (pthread_rwlock_wrlock(&inode_table[inumber].rwl)) { 
+        fprintf(stderr, "Error locking lockRead() rwl!\n");
+        exit(EXIT_FAILURE);
+    }
+    else { printf("Sucessfully locked lockRead() inode %d!\n", inumber); }
+}
+
+void lockWrite(int inumber) {
+    if (pthread_rwlock_init(&inode_table[inumber].rwl, NULL)) { 
+        fprintf(stderr, "Error initializing lockWrite() rwl!\n");
+        exit(EXIT_FAILURE);
+    }
+    else { printf("Sucessfully initialized lockWrite() inode %d!\n", inumber); }
+    if (pthread_rwlock_wrlock(&inode_table[inumber].rwl)) { 
+        fprintf(stderr, "Error locking lockWrite() rwl!\n");
+        exit(EXIT_FAILURE);
+    }
+    else { printf("Sucessfully locked lockWrite() inode %d!\n", inumber); }
+}
+
+void unlock(int inumber) {
+    if (pthread_rwlock_unlock(&inode_table[inumber].rwl)) { 
+        fprintf(stderr, "Error unlocking inode %d's rwl!\n", inumber);
+        exit(EXIT_FAILURE);
+    }
+    else { printf("Sucessfully unlocked inode %d!\n", inumber); }
+}
+
+void unlockLocks(int inumbers[], int size) {
     for (int i = 0; i < size; ++i) {
-        printf ("About to unlock %d\n", i);
-        if (pthread_rwlock_unlock(&inode_table[inumbers[i]].rwl)) { return FAIL; }
-        if (pthread_rwlock_destroy(&inode_table[inumbers[i]].rwl)) { return FAIL; }
-        printf("I just unlockRead(%d)!\n", i);
-    }
-    return SUCCESS;
-}
-
-int lockWrite(int inumber) {
-    for (int i = 0; i < MAX_DIR_ENTRIES; ++i) {
-        if (i == inumber) {
-            if (pthread_rwlock_init(&inode_table[i].rwl, NULL)) { return FAIL; }
-            if (pthread_rwlock_wrlock(&inode_table[i].rwl)) { return FAIL; }
-            printf("I just lockWrite(%d)!\n", i);
+        if (pthread_rwlock_unlock(&inode_table[inumbers[i]].rwl)) { 
+            fprintf(stderr, "Error unlocking inode %d's rwl!\n", inumbers[i]);
+            exit(EXIT_FAILURE);
         }
+        else { printf("Sucessfully unlocked inode %d!\n", inumbers[i]); }
+        if (pthread_rwlock_destroy(&inode_table[inumbers[i]].rwl)) { 
+            fprintf(stderr, "Error unlocking inode %d's rwl!\n", inumbers[i]);
+            exit(EXIT_FAILURE); 
+        }
+        else { printf("Sucessfully destroyed inode %d!\n", inumbers[i]); }
     }
-    return SUCCESS;
-}
-
-int unlockWrite(int inumbers[], int size) {
-    for (int i = 0; i < size; ++i) {
-        printf ("About to unlock %d\n", i);
-        if (pthread_rwlock_unlock(&inode_table[inumbers[i]].rwl)) { return FAIL; }
-        if (pthread_rwlock_destroy(&inode_table[inumbers[i]].rwl)) { return FAIL; }
-        printf("I just unlockWrite(%d)!\n", i);
-    }
-    return SUCCESS;
 }
 
 

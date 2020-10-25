@@ -7,7 +7,7 @@ void destroy_fs();
 int is_dir_empty(DirEntry *dirEntries);
 int create(char *name, type nodeType);
 int delete(char *name);
-int lookup(char *name);
+int lookup(char *name, int lockType);
 void print_tecnicofs_tree(FILE *fp);
 void destroy_locks();
 
