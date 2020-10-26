@@ -151,6 +151,7 @@ void processInput_aux(char* inputPath) {
 
 void applyCommands() {
     pthread_mutex_lock(&main_mutex);
+    int activeLocks[INODE_TABLE_SIZE], j = 0;
     while (numberCommands > 0){
         pthread_mutex_unlock(&main_mutex);
         const char* command = removeCommand();
@@ -186,11 +187,15 @@ void applyCommands() {
                 break;
             case 'l':
                 printf("Searching %s...\n", name);
-                searchResult = lookup(name, READ);
+                searchResult = lookup(name, activeLocks, &j, false);
                 if (searchResult >= 0)
                     printf("Search: %s found\n", name);
                 else
                     printf("Search: %s not found\n", name);
+                unlockAll(activeLocks, j);
+                /* reset array after each iteration */
+                memset(activeLocks, 0, sizeof(activeLocks));
+                j=0;
                 break;
             case 'd':
                 printf("Delete: %s\n", name);

@@ -58,7 +58,7 @@ void lock(int inumber, int lockType);
 void lockRead(int inumber);
 void lockWrite(int inumber);
 void unlock(int inumber);
-void unlockLocks(int inumbers[], int size);
+void unlockAll(int inumbers[], int size);
 void inode_print_tree(FILE *fp, int inumber, char *name);
 
 #endif /* INODES_H */
