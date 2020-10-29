@@ -12,24 +12,22 @@ LDFLAGS=-lm -pthread
 
 all: tecnicofs
 
-tecnicofs: fs/sync.o fs/state.o fs/operations.o main.o
-	$(LD) $(CFLAGS) $(LDFLAGS) -o tecnicofs fs/sync.o fs/state.o fs/operations.o main.o
+tecnicofs: fs/state.o fs/operations.o main.o
+	$(LD) $(CFLAGS) $(LDFLAGS) -o tecnicofs fs/state.o fs/operations.o main.o
 
-fs/sync.o: fs/sync.c fs/sync.h tecnicofs-api-constants.h
-	$(CC) $(CFLAGS) -o fs/sync.o -c fs/sync.c
-
-fs/state.o: fs/state.c fs/state.h fs/sync.h tecnicofs-api-constants.h
+fs/state.o: fs/state.c fs/state.h tecnicofs-api-constants.h
 	$(CC) $(CFLAGS) -o fs/state.o -c fs/state.c
 
-fs/operations.o: fs/operations.c fs/operations.h fs/state.h fs/sync.h tecnicofs-api-constants.h
+fs/operations.o: fs/operations.c fs/operations.h fs/state.h tecnicofs-api-constants.h
 	$(CC) $(CFLAGS) -o fs/operations.o -c fs/operations.c
 
-main.o: main.c fs/operations.h fs/state.h fs/sync.h tecnicofs-api-constants.h
+main.o: main.c fs/operations.h fs/state.h tecnicofs-api-constants.h
 	$(CC) $(CFLAGS) -o main.o -c main.c
 
+# Delete outputs/*.txt
 clean:
 	@echo Cleaning...
-	rm -f fs/*.o *.o *.out tecnicofs
+	rm -f *.zip fs/*.o *.o *.out tecnicofs outputs/*.txt
 
 run: tecnicofs
 	./tecnicofs
