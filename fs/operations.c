@@ -279,6 +279,7 @@ int delete(char *name){
 int lookup(char *name, int * activeLocks, int * j, bool write) {
 	char full_path[MAX_FILE_NAME];
 	char delim[] = "/";
+	char * saveptr;
 
 	strcpy(full_path, name);
 
@@ -290,7 +291,7 @@ int lookup(char *name, int * activeLocks, int * j, bool write) {
 
 	/* get root inode data */
 	inode_get(current_inumber, &nType, &data);
-	char *path = strtok(full_path, delim);
+	char *path = strtok_r(full_path, delim, &saveptr);
 	/* inode creation at root */
 	if (!path && write) {
 		lock(current_inumber, WRITE);
@@ -303,7 +304,7 @@ int lookup(char *name, int * activeLocks, int * j, bool write) {
 	while (path != NULL && (current_inumber = lookup_sub_node(path, data.dirEntries)) != FAIL) {
 		activeLocks[(*j)++] = current_inumber;
 		inode_get(current_inumber, &nType, &data);
-		path = strtok(NULL, delim);
+		path = strtok_r(NULL, delim, &saveptr);
 		if (!path && write) {
 			lock(current_inumber, WRITE);
 			return current_inumber;
