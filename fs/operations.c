@@ -262,7 +262,6 @@ int delete(char *name){
 		unlockAll(activeLocks, j);
 		return FAIL;
 	}
-
 	unlockAll(activeLocks, j);
 	return SUCCESS;
 }

@@ -16,6 +16,7 @@
 
 int numberThreads = 0;
 int numberCommands = 0;
+bool allInserted = false;
 
 char inputCommands[MAX_COMMANDS][MAX_INPUT_SIZE];
 
@@ -28,7 +29,9 @@ int condptr = 0, condrem = 0;
 
 void insertCommand(char* data) {
     pthread_mutex_lock(&mutex);
-    while (counter == MAX_COMMANDS) pthread_cond_wait(&condIns, &mutex);
+    while (counter == MAX_COMMANDS){
+        pthread_cond_wait(&condIns, &mutex);
+    }
     strcpy(inputCommands[condptr], data);
     condptr = (condptr + 1) % MAX_COMMANDS;
     counter++;
@@ -38,7 +41,13 @@ void insertCommand(char* data) {
 
 void removeCommand(char** cmd) {
     pthread_mutex_lock(&mutex);
-    while (counter == 0) pthread_cond_wait(&condRem, &mutex); 
+    while (!allInserted && counter == 0){
+        pthread_cond_wait(&condRem, &mutex);
+    }
+    if (allInserted && counter == 0){
+        pthread_mutex_unlock(&mutex);  
+        return;
+    }
     *cmd = inputCommands[condrem];
     condrem = (condrem + 1) % MAX_COMMANDS;
     counter--;
@@ -75,7 +84,6 @@ void processInput(FILE* fp){
         if (numTokens < 1) {
             continue;
         }
-        
         /* adds commands to inputCommands array */
         switch (token) {
             case 'c':
@@ -95,12 +103,13 @@ void processInput(FILE* fp){
                 break;            
             case '#':
                 break;
-            
             default: { /* error */
                 errorParse();
             }
         }
     }
+    allInserted = true;
+    pthread_cond_signal(&condIns);
 }
 
 /* 
@@ -121,13 +130,12 @@ void processInput_aux(char* inputPath) {
 
 void applyCommands() {
     int activeLocks[INODE_TABLE_SIZE], j = 0;
-    while (true){
+    while (!allInserted || counter!=0){
         char* command;
         removeCommand(&command);
         if (command == NULL){
             continue;
-        }
-
+        }  
         char token, type;
         char name[MAX_INPUT_SIZE];
 
@@ -136,10 +144,10 @@ void applyCommands() {
             fprintf(stderr, "Error: invalid command in Queue\n");
             exit(EXIT_FAILURE);
         }
-        
         int searchResult;
         switch (token) {
             case 'c':
+                    puts(command);
                 switch (type) {
                     case 'f':
                         printf("Create file: %s\n", name);
@@ -150,6 +158,7 @@ void applyCommands() {
                         create(name, T_DIRECTORY);
                         break;
                     default:
+                        putchar(type);
                         fprintf(stderr, "Error: invalid node type\n");
                         exit(EXIT_FAILURE);
                 }
@@ -169,6 +178,7 @@ void applyCommands() {
             case 'd':
                 printf("Delete: %s\n", name);
                 delete(name);
+                puts("cheguei aqui!!!!!!!!!!!!!!");
                 break;
             default: { /* error */
                 fprintf(stderr, "Error: command to apply\n");
@@ -176,22 +186,25 @@ void applyCommands() {
             }
         }
     }
+    pthread_cond_signal(&condRem);
+    puts("cheguei aqui!!!!!!!!!!!!!!");
 }
 
 
 /*
  * Initializes the thread pool.
  */
-void startThreadPool(){
+void startThreadPool(char* inputPath){
     pthread_t tid[numberThreads];
     for (int i = 0; i < numberThreads; i++) {
-        printf("%d\n",i);
+        //printf("%d\n",i);
         if (pthread_create(&tid[i], NULL, (void*) applyCommands, NULL) != 0){
             fprintf(stderr, "Thread not created!\n");
             exit(EXIT_FAILURE);
         }
-        printf("Thread %d created!\n", i);
+        //printf("Thread %d created!\n", i);
     }
+    processInput_aux(inputPath);
     for (int i = 0; i < numberThreads; i++) {
         if (pthread_join(tid[i], NULL) != 0) {
             fprintf(stderr, "Thread %d failed to join!\n", i);
@@ -227,9 +240,7 @@ int main(int argc, char* argv[]) {
 
     /* process input and print tree */
     /* main thread will produce */
-    processInput_aux(argv[1]);
-    /* threads will consume */
-    startThreadPool();
+    startThreadPool(argv[1]);
 
     /* start the clock right after pool thread creation */
     gettimeofday(&tv1, NULL);

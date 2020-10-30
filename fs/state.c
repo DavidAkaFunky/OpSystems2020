@@ -251,7 +251,7 @@ void lockRead(int inumber) {
         fprintf(stderr, "Error locking lockRead() rwl!\n");
         exit(EXIT_FAILURE);
     }
-    else { printf("Sucessfully locked lockRead() inode %d!\n", inumber); }
+    //else { printf("Sucessfully locked lockRead() inode %d!\n", inumber); }
 }
 
 void lockWrite(int inumber) {
@@ -259,7 +259,7 @@ void lockWrite(int inumber) {
         fprintf(stderr, "Error locking lockWrite() rwl!\n");
         exit(EXIT_FAILURE);
     }
-    else { printf("Sucessfully locked lockWrite() inode %d!\n", inumber); }
+    //else { printf("Sucessfully locked lockWrite() inode %d!\n", inumber); }
 }
 
 void unlock(int inumber) {
@@ -267,7 +267,7 @@ void unlock(int inumber) {
         fprintf(stderr, "Error unlocking inode %d's rwl!\n", inumber);
         exit(EXIT_FAILURE);
     }
-    else { printf("Sucessfully unlocked inode %d!\n", inumber); }
+    //else { printf("Sucessfully unlocked inode %d!\n", inumber); }
 }
 
 void unlockAll(int inumbers[], int size) {
