@@ -108,8 +108,10 @@ void processInput(FILE* fp){
             }
         }
     }
+    pthread_mutex_lock(&mutex);
     allInserted = true;
-    pthread_cond_signal(&condIns);
+    pthread_mutex_unlock(&mutex);
+    //pthread_cond_signal(&condIns);
 }
 
 /* 
@@ -130,7 +132,13 @@ void processInput_aux(char* inputPath) {
 
 void applyCommands() {
     int activeLocks[INODE_TABLE_SIZE], j = 0;
-    while (!allInserted || counter!=0){
+    while (true){
+        pthread_mutex_lock(&mutex);
+        if (allInserted && counter == 0){
+            pthread_mutex_unlock(&mutex);
+            break;
+        }
+        pthread_mutex_unlock(&mutex);
         char* command;
         removeCommand(&command);
         if (command == NULL){
@@ -147,7 +155,6 @@ void applyCommands() {
         int searchResult;
         switch (token) {
             case 'c':
-                    puts(command);
                 switch (type) {
                     case 'f':
                         printf("Create file: %s\n", name);
@@ -159,7 +166,7 @@ void applyCommands() {
                         break;
                     default:
                         putchar(type);
-                        fprintf(stderr, "Error: invalid node type\n");
+                        fprintf(stderr, "Error: invalid node type, command is %s but type is %c\n", command, type);
                         exit(EXIT_FAILURE);
                 }
                 break;
@@ -178,7 +185,6 @@ void applyCommands() {
             case 'd':
                 printf("Delete: %s\n", name);
                 delete(name);
-                puts("cheguei aqui!!!!!!!!!!!!!!");
                 break;
             default: { /* error */
                 fprintf(stderr, "Error: command to apply\n");
@@ -187,7 +193,6 @@ void applyCommands() {
         }
     }
     pthread_cond_signal(&condRem);
-    puts("cheguei aqui!!!!!!!!!!!!!!");
 }
 
 

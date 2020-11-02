@@ -262,7 +262,7 @@ int delete(char *name){
 		unlockAll(activeLocks, j);
 		return FAIL;
 	}
-	unlockAll(activeLocks, j);
+	unlockAll(activeLocks, --j);
 	return SUCCESS;
 }
 
@@ -300,7 +300,7 @@ int lookup(char *name, int * activeLocks, int * j, bool write) {
 	activeLocks[(*j)++] = current_inumber;
 
 	/* search for all sub nodes */
-	while (path != NULL && (current_inumber = lookup_sub_node(path, data.dirEntries)) != FAIL) {
+	while (path && (current_inumber = lookup_sub_node(path, data.dirEntries)) != FAIL) {
 		activeLocks[(*j)++] = current_inumber;
 		inode_get(current_inumber, &nType, &data);
 		path = strtok_r(NULL, delim, &saveptr);

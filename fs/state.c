@@ -271,8 +271,9 @@ void unlock(int inumber) {
 }
 
 void unlockAll(int inumbers[], int size) {
-    for (int i = 0; i < size; ++i) {
-        if (inumbers[i] != -1) unlock(inumbers[i]);
+    for (int i = size-1; i >= 0; --i) {
+        if (inumbers[i] != -1)
+            unlock(inumbers[i]);
     }
 }
 
