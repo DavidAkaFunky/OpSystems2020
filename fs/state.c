@@ -23,6 +23,10 @@ void inode_table_init() {
         inode_table[i].nodeType = T_NONE;
         inode_table[i].data.dirEntries = NULL;
         inode_table[i].data.fileContents = NULL;
+        if (pthread_rwlock_init(&inode_table[i].rwl, NULL)) {
+                fprintf(stderr, "Error initializing inode %d rwlock!\n", i);
+                exit(EXIT_FAILURE);
+        }
     }
 }
 
@@ -37,12 +41,12 @@ void inode_table_destroy() {
 	        if (inode_table[i].data.dirEntries) {
                 free(inode_table[i].data.dirEntries);
             }
-            if (pthread_rwlock_destroy(&inode_table[i].rwl)) {
+        }
+        if (pthread_rwlock_destroy(&inode_table[i].rwl)) {
                 fprintf(stderr, "Error destroying inode %d rwlock!\n", i);
                 exit(EXIT_FAILURE);
-            }
         }
-    }
+    } 
 }
 
 /*
@@ -60,21 +64,21 @@ int inode_create(type nType) {
 
     for (int inumber = 0; inumber < INODE_TABLE_SIZE; inumber++) {
         if (inode_table[inumber].nodeType == T_NONE) {
-            inode_table[inumber].nodeType = nType;
-            if (pthread_rwlock_init(&inode_table[inumber].rwl, NULL)) {
-                fprintf(stderr, "Error initializing inode %d rwlock!\n", inumber);
-                exit(EXIT_FAILURE);
-            }
-            if (nType == T_DIRECTORY) {
-                /* Initializes entry table */
-                inode_table[inumber].data.dirEntries = malloc(sizeof(DirEntry) * MAX_DIR_ENTRIES);
-                for (int i = 0; i < MAX_DIR_ENTRIES; i++) {
-                    inode_table[inumber].data.dirEntries[i].inumber = FREE_INODE;
+            lock(inumber, WRITE);
+            if (inode_table[inumber].nodeType == T_NONE) {
+                inode_table[inumber].nodeType = nType;
+                if (nType == T_DIRECTORY) {
+                    /* Initializes entry table */
+                    inode_table[inumber].data.dirEntries = malloc(sizeof(DirEntry) * MAX_DIR_ENTRIES);
+                    for (int i = 0; i < MAX_DIR_ENTRIES; i++) {
+                        inode_table[inumber].data.dirEntries[i].inumber = FREE_INODE;
+                    }
+                } else {
+                    inode_table[inumber].data.fileContents = NULL;
                 }
-            } else {
-                inode_table[inumber].data.fileContents = NULL;
+                return inumber;
             }
-            return inumber;
+            unlock(inumber);
         }
     }
     return FAIL;

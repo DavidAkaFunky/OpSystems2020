@@ -160,8 +160,6 @@ int create(char *name, type nodeType){
 
 	/* create node and add entry to folder that contains new node */
 	child_inumber = inode_create(nodeType);
-	lock(child_inumber, WRITE);
-	activeLocks[j++] = child_inumber;
 	
 	/* inode_create returns FAIL if anything went wrong */
 	if (child_inumber == FAIL) {
@@ -179,6 +177,7 @@ int create(char *name, type nodeType){
 		return FAIL;
 	}
 
+	activeLocks[j++] = child_inumber;
 	unlockAll(activeLocks, j);
 	return SUCCESS;
 }
