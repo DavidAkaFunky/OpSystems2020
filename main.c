@@ -39,8 +39,7 @@ void insertCommand(char* data) {
     pthread_mutex_unlock(&mutex);
 }
 
-void removeCommand(char** cmd) {
-    pthread_mutex_lock(&mutex);
+void removeCommand(char* cmd) {
     while (!allInserted && counter == 0){
         pthread_cond_wait(&condRem, &mutex);
     }
@@ -48,11 +47,10 @@ void removeCommand(char** cmd) {
         pthread_mutex_unlock(&mutex);  
         return;
     }
-    *cmd = inputCommands[condrem];
+    strcpy(cmd, inputCommands[condrem]);
     condrem = (condrem + 1) % MAX_COMMANDS;
     counter--;
     pthread_cond_signal(&condIns);
-    pthread_mutex_unlock(&mutex);
 }
 
 
@@ -111,7 +109,7 @@ void processInput(FILE* fp){
     pthread_mutex_lock(&mutex);
     allInserted = true;
     pthread_mutex_unlock(&mutex);
-    //pthread_cond_signal(&condIns);
+    pthread_cond_broadcast(&condIns);
 }
 
 /* 
@@ -138,18 +136,18 @@ void applyCommands() {
             pthread_mutex_unlock(&mutex);
             break;
         }
-        pthread_mutex_unlock(&mutex);
-        char* command;
-        removeCommand(&command);
+        char command[MAX_INPUT_SIZE];
+        removeCommand(command);
         if (command == NULL){
             continue;
-        }  
+        }
+        pthread_mutex_unlock(&mutex);
         char token, type;
         char name[MAX_INPUT_SIZE];
 
         int numTokens = sscanf(command, "%c %s %c", &token, name, &type);
         if (numTokens < 2) {
-            fprintf(stderr, "Error: invalid command in Queue\n");
+            fprintf(stderr, "Error: invalid command :%s: in Queue\n", command);
             exit(EXIT_FAILURE);
         }
         int searchResult;
@@ -165,8 +163,7 @@ void applyCommands() {
                         create(name, T_DIRECTORY);
                         break;
                     default:
-                        putchar(type);
-                        fprintf(stderr, "Error: invalid node type, command is %s but type is %c\n", command, type);
+                        fprintf(stderr, "Error: invalid node type\n");
                         exit(EXIT_FAILURE);
                 }
                 break;
@@ -192,7 +189,7 @@ void applyCommands() {
             }
         }
     }
-    pthread_cond_signal(&condRem);
+    pthread_cond_broadcast(&condRem);
 }
 
 
