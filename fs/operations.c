@@ -49,7 +49,8 @@ void init_fs() {
 	
 	/* create root inode */
 	int root = inode_create(T_DIRECTORY);
-	
+	unlock(root);
+
 	if (root != FS_ROOT) {
 		printf("failed to create node for tecnicofs root\n");
 		exit(EXIT_FAILURE);
@@ -81,30 +82,6 @@ int is_dir_empty(DirEntry *dirEntries) {
 		}
 	}
 	return SUCCESS;
-}
-
-
-/*
- * Looks for node in directory entry from name.
- * Input:
- *  - name: path of node
- *  - entries: entries of directory
- * Returns:
- *  - inumber: found node's inumber
- *  - FAIL: if not found
- */
-int lookup_sub_node(char *name, DirEntry *entries) {
- 
-	if (entries == NULL) {
-		return FAIL;
-	}
-	for (int i = 0; i < MAX_DIR_ENTRIES; i++) {
-        if (entries[i].inumber != FREE_INODE && strcmp(entries[i].name, name) == 0) {
-            return entries[i].inumber;
-        }
-    }
-	
-	return FAIL;
 }
 
 
@@ -151,7 +128,7 @@ int create(char *name, type nodeType){
 	}
 
 	/* if file already exists, can't create it */
-	if (lookup_sub_node(child_name, pdata.dirEntries) != FAIL) {
+	if (lookup_sub_node(child_name, pdata.dirEntries, false) != FAIL) {
 		printf("failed to create %s, already exists in dir %s\n",
 		       child_name, parent_name);
 		unlockAll(activeLocks, j);
@@ -169,6 +146,8 @@ int create(char *name, type nodeType){
 		return FAIL;
 	}
 
+	activeLocks[j++] = child_inumber;
+
 	/* add entry do parent directory */
 	if (dir_add_entry(parent_inumber, child_inumber, child_name) == FAIL) {
 		printf("could not add entry %s in dir %s\n",
@@ -177,7 +156,6 @@ int create(char *name, type nodeType){
 		return FAIL;
 	}
 
-	activeLocks[j++] = child_inumber;
 	unlockAll(activeLocks, j);
 	return SUCCESS;
 }
@@ -220,9 +198,7 @@ int delete(char *name){
 		return FAIL;
 	}
 
-	child_inumber = lookup_sub_node(child_name, pdata.dirEntries);
-	lock(child_inumber, WRITE);
-	activeLocks[j++] = child_inumber;
+	child_inumber = lookup_sub_node(child_name, pdata.dirEntries, true);
 
 	if (child_inumber == FAIL) {
 		printf("could not delete %s, does not exist in dir %s\n",
@@ -230,6 +206,8 @@ int delete(char *name){
 		unlockAll(activeLocks, j);
 		return FAIL;
 	}
+
+	activeLocks[j++] = child_inumber;
 
 	inode_get(child_inumber, &cType, &cdata);
 
@@ -299,7 +277,7 @@ int lookup(char *name, int * activeLocks, int * j, bool write) {
 	activeLocks[(*j)++] = current_inumber;
 
 	/* search for all sub nodes */
-	while (path && (current_inumber = lookup_sub_node(path, data.dirEntries)) != FAIL) {
+	while (path && (current_inumber = lookup_sub_node(path, data.dirEntries, false)) != FAIL) {
 		activeLocks[(*j)++] = current_inumber;
 		inode_get(current_inumber, &nType, &data);
 		path = strtok_r(NULL, delim, &saveptr);

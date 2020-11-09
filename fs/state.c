@@ -24,8 +24,8 @@ void inode_table_init() {
         inode_table[i].data.dirEntries = NULL;
         inode_table[i].data.fileContents = NULL;
         if (pthread_rwlock_init(&inode_table[i].rwl, NULL)) {
-                fprintf(stderr, "Error initializing inode %d rwlock!\n", i);
-                exit(EXIT_FAILURE);
+            fprintf(stderr, "Error initializing inode %d rwlock!\n", i);
+            exit(EXIT_FAILURE);
         }
     }
 }
@@ -63,22 +63,20 @@ int inode_create(type nType) {
     insert_delay(DELAY);
 
     for (int inumber = 0; inumber < INODE_TABLE_SIZE; inumber++) {
-        if (inode_table[inumber].nodeType == T_NONE) {
-            lock(inumber, WRITE);
-            if (inode_table[inumber].nodeType == T_NONE) {
-                inode_table[inumber].nodeType = nType;
-                if (nType == T_DIRECTORY) {
-                    /* Initializes entry table */
-                    inode_table[inumber].data.dirEntries = malloc(sizeof(DirEntry) * MAX_DIR_ENTRIES);
-                    for (int i = 0; i < MAX_DIR_ENTRIES; i++) {
-                        inode_table[inumber].data.dirEntries[i].inumber = FREE_INODE;
-                    }
-                } else {
-                    inode_table[inumber].data.fileContents = NULL;
+        if (inode_table[inumber].nodeType == T_NONE &&
+            !pthread_rwlock_trywrlock(&inode_table[inumber].rwl) &&
+            inode_table[inumber].nodeType == T_NONE) {
+            inode_table[inumber].nodeType = nType;
+            if (nType == T_DIRECTORY) {
+                /* Initializes entry table */
+                inode_table[inumber].data.dirEntries = malloc(sizeof(DirEntry) * MAX_DIR_ENTRIES);
+                for (int i = 0; i < MAX_DIR_ENTRIES; i++) {
+                    inode_table[inumber].data.dirEntries[i].inumber = FREE_INODE;
                 }
-                return inumber;
+            } else {
+                inode_table[inumber].data.fileContents = NULL;
             }
-            unlock(inumber);
+            return inumber;
         }
     }
     return FAIL;
@@ -142,6 +140,38 @@ int inode_get(int inumber, type *nType, union Data *data) {
         *data = inode_table[inumber].data;
 
     return SUCCESS;
+}
+
+
+/*
+ * Looks for node in directory entry from name.
+ * Input:
+ *  - name: path of node
+ *  - entries: entries of directory
+ * Returns:
+ *  - inumber: found node's inumber
+ *  - FAIL: if not found
+ */
+int lookup_sub_node(char *name, DirEntry *entries, bool write) {
+ 
+	if (entries == NULL) {
+		return FAIL;
+	}
+	for (int i = 0; i < MAX_DIR_ENTRIES; i++) {
+        if (entries[i].inumber != FREE_INODE && strcmp(entries[i].name, name) == 0) {
+            if (write){
+                if(!pthread_rwlock_trywrlock(&inode_table[i].rwl) &&
+                    entries[i].inumber != FREE_INODE &&
+                    strcmp(entries[i].name, name) == 0)
+                    return entries[i].inumber;
+                else
+                    continue;
+            }
+            return entries[i].inumber;
+        }
+    }
+	
+	return FAIL;
 }
 
 

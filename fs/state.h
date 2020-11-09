@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <stdbool.h>
 #include "../tecnicofs-api-constants.h"
 
 /* FS root inode number */
@@ -51,7 +52,7 @@ void inode_table_destroy();
 int inode_create(type nType);
 int inode_delete(int inumber);
 int inode_get(int inumber, type *nType, union Data *data);
-int inode_set_file(int inumber, char *fileContents, int len);
+int lookup_sub_node(char *name, DirEntry *entries, bool write);
 int dir_reset_entry(int inumber, int sub_inumber);
 int dir_add_entry(int inumber, int sub_inumber, char *sub_name);
 void lock(int inumber, int lockType);
