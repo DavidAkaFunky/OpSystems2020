@@ -263,6 +263,7 @@ int dir_add_entry(int inumber, int sub_inumber, char *sub_name) {
             return SUCCESS;
         }
     }
+    
     return FAIL;
 }
 

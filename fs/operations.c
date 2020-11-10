@@ -148,7 +148,7 @@ int create(char *name, type nodeType){
 
 	activeLocks[j++] = child_inumber;
 
-	/* add entry do parent directory */
+	/* add entry to parent directory */
 	if (dir_add_entry(parent_inumber, child_inumber, child_name) == FAIL) {
 		printf("could not add entry %s in dir %s\n",
 		       child_name, parent_name);
@@ -265,8 +265,6 @@ int lookup(char *name, int * activeLocks, int * j, bool write) {
 	type nType;
 	union Data data;
 
-	/* get root inode data */
-	inode_get(current_inumber, &nType, &data);
 	char *path = strtok_r(full_path, delim, &saveptr);
 	/* inode creation at root */
 	if (!path && write) {
@@ -274,18 +272,21 @@ int lookup(char *name, int * activeLocks, int * j, bool write) {
 	} else {
 		lock(current_inumber, READ);
 	}
+	/* get root inode data */
+	inode_get(current_inumber, &nType, &data);
 	activeLocks[(*j)++] = current_inumber;
 
 	/* search for all sub nodes */
 	while (path && (current_inumber = lookup_sub_node(path, data.dirEntries, false)) != FAIL) {
-		activeLocks[(*j)++] = current_inumber;
 		inode_get(current_inumber, &nType, &data);
 		path = strtok_r(NULL, delim, &saveptr);
 		if (!path && write) {
 			lock(current_inumber, WRITE);
+			activeLocks[(*j)++] = current_inumber;
 			return current_inumber;
 		} else {
 			lock(current_inumber, READ);
+			activeLocks[(*j)++] = current_inumber;
 		}
 	}
 
