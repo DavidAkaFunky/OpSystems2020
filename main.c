@@ -11,8 +11,8 @@
 #define MAX_COMMANDS 10
 #define MAX_INPUT_SIZE 100
 
-// Consumidor = insertCommand
-// Produtor = removeCommand
+// Produtor = insertCommand
+// Consumidor = removeCommand
 
 int numberThreads = 0;
 int numberCommands = 0;
@@ -40,13 +40,10 @@ void insertCommand(char* data) {
 }
 
 void removeCommand(char* cmd) {
-    while (!allInserted && counter == 0){
+    while (!allInserted && counter == 0)
         pthread_cond_wait(&condRem, &mutex);
-    }
-    if (allInserted && counter == 0){
-        pthread_mutex_unlock(&mutex);  
+    if (allInserted && counter == 0)
         return;
-    }
     strcpy(cmd, inputCommands[condrem]);
     condrem = (condrem + 1) % MAX_COMMANDS;
     counter--;
@@ -98,7 +95,12 @@ void processInput(FILE* fp){
                 if(numTokens != 2)
                     errorParse();
                 insertCommand(line);
-                break;            
+                break;
+            case 'm':
+                if(numTokens != 3)
+                    errorParse();
+                insertCommand(line);
+                break;           
             case '#':
                 break;
             default: { /* error */
@@ -143,13 +145,15 @@ void applyCommands() {
         }
         pthread_mutex_unlock(&mutex);
         char token, type;
-        char name[MAX_INPUT_SIZE];
+        char name[MAX_INPUT_SIZE], arg[MAX_INPUT_SIZE];
 
-        int numTokens = sscanf(command, "%c %s %c", &token, name, &type);
+        int numTokens = sscanf(command, "%c %s %s", &token, name, arg);
         if (numTokens < 2) {
             fprintf(stderr, "Error: invalid command :%s: in Queue\n", command);
             exit(EXIT_FAILURE);
         }
+        if (numTokens == 3 && strlen(arg) == 1)
+            type = arg[0];
         int searchResult;
         switch (token) {
             case 'c':
@@ -183,6 +187,10 @@ void applyCommands() {
                 printf("Delete: %s\n", name);
                 delete(name);
                 break;
+            case 'm':
+                printf("Move: %s to %s\n", name, arg);
+                move(name, arg);
+                break;
             default: { /* error */
                 fprintf(stderr, "Error: command to apply\n");
                 exit(EXIT_FAILURE);
@@ -206,7 +214,11 @@ void startThreadPool(char* inputPath){
         }
         //printf("Thread %d created!\n", i);
     }
+    /* start the clock right after pool thread creation */
+    gettimeofday(&tv1, NULL);
     processInput_aux(inputPath);
+    /* end the clock */
+    gettimeofday(&tv2, NULL);
     for (int i = 0; i < numberThreads; i++) {
         if (pthread_join(tid[i], NULL) != 0) {
             fprintf(stderr, "Thread %d failed to join!\n", i);
@@ -239,20 +251,14 @@ int main(int argc, char* argv[]) {
     /* init filesystem and dinamically initialize mutex if needed */
     init_fs();
     validateNumThreads(argv[3]);
-
-    /* process input and print tree */
-    /* main thread will produce */
+    
     startThreadPool(argv[1]);
 
-    /* start the clock right after pool thread creation */
-    gettimeofday(&tv1, NULL);
     print_tecnicofs_tree_aux(argv[2]);
 
     /* release allocated memory */
     destroy_fs();
 
-    /* end the clock */
-    gettimeofday(&tv2, NULL);
     printf ("TecnicoFS completed in %.4f seconds.\n",
          (double) (tv2.tv_usec - tv1.tv_usec) / 1000000 +
          (double) (tv2.tv_sec - tv1.tv_sec));
