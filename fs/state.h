@@ -45,6 +45,7 @@ typedef struct inode_t {
     /* more i-node attributes will be added in future exercises */
 } inode_t;
 
+inode_t inode_table[INODE_TABLE_SIZE];
 
 void insert_delay(int cycles);
 void inode_table_init();

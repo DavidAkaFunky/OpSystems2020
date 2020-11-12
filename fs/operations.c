@@ -140,7 +140,7 @@ int create(char *name, type nodeType){
 	
 	/* inode_create returns FAIL if anything went wrong */
 	if (child_inumber == FAIL) {
-		printf("failed to create %s in  %s, couldn't allocate inode\n",
+		printf("failed to create %s in %s, couldn't allocate inode\n",
 		        child_name, parent_name);
 		unlockAll(activeLocks, j);
 		return FAIL;
@@ -293,6 +293,58 @@ int lookup(char *name, int * activeLocks, int * j, bool write) {
 	return current_inumber;
 }
 
+int move(char* oldPath, char* newPath){
+	
+	int activeLocks[INODE_TABLE_SIZE], j = 0;
+	int inumber = lookup(oldPath, activeLocks, &j, true);
+
+	if (inumber == FAIL) {
+		printf("failed to move from %s to %s, there's no file or dir with the old path name\n", oldPath, newPath);
+		unlockAll(activeLocks, j);
+		return FAIL;
+	}
+
+	char *new_parent_name, *new_child_name, newPath_copy[MAX_FILE_NAME];
+	strcpy(newPath_copy, newPath);
+	/* produces path to child : i.e. "c s1/s2/s3 d" -> parent_name = "s1/s2" ; child_name = "s3" */
+	/* idem to file */
+	split_parent_child_from_path(newPath_copy, &new_parent_name, &new_child_name);
+	int new_parent_inumber = lookup(new_parent_name, activeLocks, &j, true);
+	
+	if (new_parent_inumber == FAIL) {
+		printf("failed to move from %s to %s, there's no file or dir with the new parent name\n", oldPath, newPath);
+		unlockAll(activeLocks, j);
+		return FAIL;
+	}
+
+	union Data new_pdata;
+	type new_pType;
+	inode_get(new_parent_inumber, &new_pType, &new_pdata);
+
+	if (new_pType != T_DIRECTORY) {
+		printf("failed to move from %s to %s, there's a file with the new parent name, not a dir\n", oldPath, newPath);
+		unlockAll(activeLocks, j);
+		return FAIL;
+	}
+	if (lookup(newPath, activeLocks, &j, true) != FAIL){
+		printf("failed to move from %s to %s, there's a file or dir with the new path name\n", oldPath, newPath);
+		unlockAll(activeLocks, j);
+		return FAIL;
+	}
+
+	char *old_parent_name, *old_child_name, oldPath_copy[MAX_FILE_NAME];
+	strcpy(oldPath_copy, oldPath);
+	/* produces path to child : i.e. "c s1/s2/s3 d" -> parent_name = "s1/s2" ; child_name = "s3" */
+	/* idem to file */
+	split_parent_child_from_path(oldPath_copy, &old_parent_name, &old_child_name);
+	/* if the child was found, there's no need to check again for the father */
+	int old_parent_inumber = lookup(old_parent_name, activeLocks, &j, false);
+
+	dir_add_entry(new_parent_inumber, inumber, new_child_name);
+	dir_reset_entry(old_parent_inumber, inumber);
+
+	return SUCCESS;
+}
 
 /*
  * Prints tecnicofs tree.

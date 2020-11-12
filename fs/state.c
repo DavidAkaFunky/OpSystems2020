@@ -6,8 +6,6 @@
 #include "state.h"
 #include "../tecnicofs-api-constants.h"
 
-inode_t inode_table[INODE_TABLE_SIZE];
-
 /*
  * Sleeps for synchronization testing.
  */
@@ -282,18 +280,12 @@ void lock(int inumber, int lockType) {
 }
 
 void lockRead(int inumber) {
-    if (pthread_rwlock_rdlock(&inode_table[inumber].rwl)) { 
-        fprintf(stderr, "Error locking lockRead() rwl!\n");
-        exit(EXIT_FAILURE);
-    }
+    pthread_rwlock_tryrdlock(&inode_table[inumber].rwl);
     //else { printf("Sucessfully locked lockRead() inode %d!\n", inumber); }
 }
 
 void lockWrite(int inumber) {
-    if (pthread_rwlock_wrlock(&inode_table[inumber].rwl)) { 
-        fprintf(stderr, "Error locking lockWrite() rwl!\n");
-        exit(EXIT_FAILURE);
-    }
+    pthread_rwlock_trywrlock(&inode_table[inumber].rwl);
     //else { printf("Sucessfully locked lockWrite() inode %d!\n", inumber); }
 }
 
