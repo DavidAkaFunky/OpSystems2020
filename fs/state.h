@@ -17,7 +17,7 @@
 #define SUCCESS 0
 #define FAIL -1
 
-#define DELAY 5000
+#define DELAY 5000000
 
 /*
  * Contains the name of the entry and respective i-number
@@ -56,9 +56,12 @@ int inode_get(int inumber, type *nType, union Data *data);
 int lookup_sub_node(char *name, DirEntry *entries, bool write);
 int dir_reset_entry(int inumber, int sub_inumber);
 int dir_add_entry(int inumber, int sub_inumber, char *sub_name);
+int tryLock(int inumber, int lockType);
 int lock(int inumber, int lockType);
 int lockRead(int inumber);
 int lockWrite(int inumber);
+int tryLockRead(int inumber);
+int tryLockWrite(int inumber);
 void unlock(int inumber);
 void unlockAll(int inumbers[], int size);
 void inode_print_tree(FILE *fp, int inumber, char *name);

@@ -41,8 +41,7 @@ void inode_table_destroy() {
             }
         }
         if (pthread_rwlock_destroy(&inode_table[i].rwl)) {
-                fprintf(stderr, "Error destroying inode %d rwlock!\n", i);
-                exit(EXIT_FAILURE);
+            printf("Error destroying node %d rwlock!\n", i);
         }
     } 
 }
@@ -62,7 +61,7 @@ int inode_create(type nType) {
 
     for (int inumber = 0; inumber < INODE_TABLE_SIZE; inumber++) {
         if (inode_table[inumber].nodeType == T_NONE &&
-            !lock(inumber, WRITE) &&
+            !tryLock(inumber, WRITE) &&
             inode_table[inumber].nodeType == T_NONE) {
             inode_table[inumber].nodeType = nType;
             if (nType == T_DIRECTORY) {
@@ -100,13 +99,6 @@ int inode_delete(int inumber) {
     /* ^^ -> it frees the dirEntries and fileContents (union) */
     if (inode_table[inumber].data.dirEntries) {
         free(inode_table[inumber].data.dirEntries);
-    }
-
-    unlock(inumber);
-
-    if (pthread_rwlock_destroy(&inode_table[inumber].rwl)) {
-        fprintf(stderr, "Error destroying inode %d rwlock!\n", inumber);
-        exit(EXIT_FAILURE);
     }
 
     return SUCCESS;
@@ -158,12 +150,13 @@ int lookup_sub_node(char *name, DirEntry *entries, bool write) {
 	for (int i = 0; i < MAX_DIR_ENTRIES; i++) {
         if (entries[i].inumber != FREE_INODE && strcmp(entries[i].name, name) == 0) {
             if (write){
-                if(!pthread_rwlock_trywrlock(&inode_table[i].rwl) &&
+                printf("PullUp with name %s", name);
+                if(!tryLock(entries[i].inumber, WRITE) &&
                     entries[i].inumber != FREE_INODE &&
-                    strcmp(entries[i].name, name) == 0)
+                    !strcmp(entries[i].name, name))
                     return entries[i].inumber;
                 else
-                    continue;
+                    break;
             }
             return entries[i].inumber;
         }
@@ -284,21 +277,55 @@ int lock(int inumber, int lockType) {
     return SUCCESS;
 }
 
+int tryLock(int inumber, int lockType) {
+    if (lockType == READ) {
+        if (tryLockRead(inumber)) {
+            return FAIL;
+        }
+    }
+    else if (lockType == WRITE) {
+        if (tryLockWrite(inumber)) {
+            return FAIL;
+        }
+    }
+    return SUCCESS;
+}
+
 int lockRead(int inumber) {
-    if (!pthread_rwlock_tryrdlock(&inode_table[inumber].rwl)) {
+    if (!pthread_rwlock_rdlock(&inode_table[inumber].rwl)) {
         printf("Sucessfully locked lockRead() inode %d!\n", inumber);
     } else {
-        printf("The tryLockRead() failed in %d inode!\n", inumber);
+        printf("The lockRead() failed in inode %d!\n", inumber);
         return FAIL;
     }
     return SUCCESS;
 }
 
 int lockWrite(int inumber) {
-    if (!pthread_rwlock_trywrlock(&inode_table[inumber].rwl)) {
+    if (!pthread_rwlock_wrlock(&inode_table[inumber].rwl)) {
         printf("Sucessfully locked lockWrite() inode %d!\n", inumber);
     } else {
-        printf("The tryLockWrite() failed in %d inode!\n", inumber);
+        printf("The lockWrite() failed in %d inode!\n", inumber);
+        return FAIL;
+    }
+    return SUCCESS;
+}
+
+int tryLockRead(int inumber) {
+    if (!pthread_rwlock_tryrdlock(&inode_table[inumber].rwl)) {
+        printf("Sucessfully locked tryLockRead() inode %d!\n", inumber);
+    } else {
+        printf("The tryLockRead() failed in inode %d!\n", inumber);
+        return FAIL;
+    }
+    return SUCCESS;
+}
+
+int tryLockWrite(int inumber) {
+    if (!pthread_rwlock_trywrlock(&inode_table[inumber].rwl)) {
+        printf("Sucessfully locked tryLockWrite() inode %d!\n", inumber);
+    } else {
+        printf("The tryLockWrite() failed in inode %d!\n", inumber);
         return FAIL;
     }
     return SUCCESS;
@@ -315,8 +342,7 @@ void unlock(int inumber) {
 
 void unlockAll(int inumbers[], int size) {
     for (int i = size-1; i >= 0; --i) {
-        if (inumbers[i] != -1)
-            unlock(inumbers[i]);
+        unlock(inumbers[i]);
     }
 }
 
