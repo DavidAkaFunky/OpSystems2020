@@ -62,7 +62,7 @@ int inode_create(type nType) {
 
     for (int inumber = 0; inumber < INODE_TABLE_SIZE; inumber++) {
         if (inode_table[inumber].nodeType == T_NONE &&
-            !pthread_rwlock_trywrlock(&inode_table[inumber].rwl) &&
+            !lock(inumber, WRITE) &&
             inode_table[inumber].nodeType == T_NONE) {
             inode_table[inumber].nodeType = nType;
             if (nType == T_DIRECTORY) {
@@ -270,31 +270,47 @@ int dir_add_entry(int inumber, int sub_inumber, char *sub_name) {
  * and depending on lockType, it'll lock on read or 
  * write.
  */
-void lock(int inumber, int lockType) {
+int lock(int inumber, int lockType) {
     if (lockType == READ) {
-        lockRead(inumber);
+        if (lockRead(inumber)) {
+            return FAIL;
+        }
     }
     else if (lockType == WRITE) {
-        lockWrite(inumber);
+        if (lockWrite(inumber)) {
+            return FAIL;
+        }
     }
+    return SUCCESS;
 }
 
-void lockRead(int inumber) {
-    pthread_rwlock_tryrdlock(&inode_table[inumber].rwl);
-    //else { printf("Sucessfully locked lockRead() inode %d!\n", inumber); }
+int lockRead(int inumber) {
+    if (!pthread_rwlock_tryrdlock(&inode_table[inumber].rwl)) {
+        printf("Sucessfully locked lockRead() inode %d!\n", inumber);
+    } else {
+        printf("The tryLockRead() failed in %d inode!\n", inumber);
+        return FAIL;
+    }
+    return SUCCESS;
 }
 
-void lockWrite(int inumber) {
-    pthread_rwlock_trywrlock(&inode_table[inumber].rwl);
-    //else { printf("Sucessfully locked lockWrite() inode %d!\n", inumber); }
+int lockWrite(int inumber) {
+    if (!pthread_rwlock_trywrlock(&inode_table[inumber].rwl)) {
+        printf("Sucessfully locked lockWrite() inode %d!\n", inumber);
+    } else {
+        printf("The tryLockWrite() failed in %d inode!\n", inumber);
+        return FAIL;
+    }
+    return SUCCESS;
 }
+
 
 void unlock(int inumber) {
     if (pthread_rwlock_unlock(&inode_table[inumber].rwl)) { 
         fprintf(stderr, "Error unlocking inode %d's rwl!\n", inumber);
         exit(EXIT_FAILURE);
     }
-    //else { printf("Sucessfully unlocked inode %d!\n", inumber); }
+    printf("Sucessfully unlocked inode %d!\n", inumber);
 }
 
 void unlockAll(int inumbers[], int size) {
