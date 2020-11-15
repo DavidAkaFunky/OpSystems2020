@@ -92,7 +92,7 @@ int is_dir_empty(DirEntry *dirEntries) {
  *  - nodeType: type of node
  * Returns: SUCCESS or FAIL
  */
-int create(char *name, type nodeType){
+int create(char *name, type nodeType) {
 
 	int parent_inumber, child_inumber;
 	char *parent_name, *child_name, name_copy[MAX_FILE_NAME];
@@ -167,7 +167,7 @@ int create(char *name, type nodeType){
  *  - name: path of node
  * Returns: SUCCESS or FAIL
  */
-int delete(char *name){
+int delete(char *name) {
 
 	int parent_inumber, child_inumber;
 	char *parent_name, *child_name, name_copy[MAX_FILE_NAME];
@@ -493,7 +493,7 @@ int move(char* oldPath, char* newPath) {
  * Input:
  *  - fp: pointer to output file
  */
-void print_tecnicofs_tree(FILE *fp){
+void print_tecnicofs_tree(FILE *fp) {
 	inode_print_tree(fp, FS_ROOT, "");
 }
 
