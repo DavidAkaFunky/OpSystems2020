@@ -7,13 +7,11 @@
 #include <sys/time.h>
 #include "fs/operations.h"
 
-
 #define MAX_COMMANDS 10
 #define MAX_INPUT_SIZE 100
 
 // Producer = insertCommand
 // Consumer = removeCommand
-
 int numberThreads = 0;
 int numberCommands = 0;
 bool allInserted = false;
@@ -28,9 +26,9 @@ int counter = 0;
 int condptr = 0, condrem = 0;
 
 /**
- * PRODUCER
- * Inserts commands from input file to buffer inputCommands to be read
- * from CONSUMER on removeCommand
+ * Inserts commands from input file to buffer inputCommands
+ * Input:
+ *  - data: line from input file to be added to buffer.s
  */
 void insertCommand(char* data) {
     pthread_mutex_lock(&mutex);
@@ -45,9 +43,9 @@ void insertCommand(char* data) {
 }
 
 /**
- * CONSUMER
- * Reads commands from buffer inputCommands and inserts it in parameter
- * char pointer "cmd".
+ * Reads commands from buffer.
+ * Input:
+ *  - cmd: pointer that'll store command read from buffer
  */
 void removeCommand(char * cmd) {
     while (!allInserted && counter == 0) {
@@ -71,8 +69,9 @@ void errorParse() {
 }
 
 /**
- * WRAPPER to init_fs
- * Checks number of input arguments and calls wrapped function.
+ * Initializes TecnicoFS.
+ * Input:
+ *  - argc: number of input arguments from stdin.
  */ 
 void init_fs_aux(int argc) {
     /* Validate number of input arguments */ 
@@ -84,8 +83,7 @@ void init_fs_aux(int argc) {
 }
 
 /**
- * WRAPPER to destroy_fs
- * Prints TecnicoFS execution time and calls wrapped function.
+ * Prints TecnicoFS execution time and destroys TecnicoFS and i-node table
  */
 void destroy_fs_aux() {
     destroy_fs();
@@ -110,6 +108,8 @@ void validateNumThreads(char* numThreads) {
 
 /**
  * Processes each line from file "fp" and adds it to inputCommands buffer.
+ * Input:
+ *  - fp: input file where each line is a command to a certain operation
  */
 void processInput(FILE* fp) {
     char line[MAX_INPUT_SIZE];
@@ -119,11 +119,11 @@ void processInput(FILE* fp) {
 
         int numTokens = sscanf(line, "%c %s %c", &token, name, &type);
 
-        /* sscanf returns 0 or EOF if input is invalid */
+        /* Function sscanf returns 0 or EOF if input is invalid */
         if (numTokens < 1) {
             continue;
         }
-        /* Process each line and gives it to the PRODUCER */
+        /* Process each line and give it to the PRODUCER */
         switch (token) {
             case 'c':
                 if(numTokens != 3)
@@ -161,8 +161,9 @@ void processInput(FILE* fp) {
 }
 
 /* 
- * WRAPPER to processInput
- * Proper opening and closing of "inputPath" and calls the wrapped function
+ * Processes input to buffer.
+ * Input:
+ *  - inputPath: string containing the input file path
  */
 void processInput_aux(char* inputPath) {
     FILE* fp = fopen(inputPath, "r");
@@ -175,7 +176,7 @@ void processInput_aux(char* inputPath) {
 }
 
 /**
- * Reads every command from "inputCommands" buffer and calls each operation function
+ * Calls operations on different commands read from "inputCommands" buffer
  */
 void applyCommands() {
     int activeLocks[INODE_TABLE_SIZE], numActiveLocks = 0;
@@ -198,6 +199,7 @@ void applyCommands() {
             fprintf(stderr, "Error: invalid command :%s: in Queue\n", command);
             exit(EXIT_FAILURE);
         }
+        /* Create third argument is either "d" or "f" */
         if (numTokens == 3 && strlen(arg) == 1) type = arg[0];
         int searchResult;
         switch (token) {
@@ -246,6 +248,8 @@ void applyCommands() {
 
 /*
  * Initializes the thread pool.
+ * Input:
+ *  - inputPath: string containing the input file path
  */
 void startThreadPool(char* inputPath) {
     pthread_t tid[numberThreads];
@@ -269,8 +273,9 @@ void startThreadPool(char* inputPath) {
 }
 
 /* 
- * WRAPPER to print_tecnicofs_tree
- * Proper opening and closing of "outputPath" and calls the wrapped function
+ * Prints TecnicoFS tree.
+ * Input:
+ *  - outputPath: string containing the output file path
  */
 void print_tecnicofs_tree_aux(char* outputPath) {
     FILE* fp = fopen(outputPath, "w");

@@ -258,9 +258,11 @@ int dir_add_entry(int inumber, int sub_inumber, char *sub_name) {
 }
 
 /**
- * Wrapper to lock i-node given its inumber
- * and depending on lockType, it'll lock on read or 
- * write.
+ * Locks i-node rwlock.
+ * Input:
+ *  - inumber: number of the i-node being locked
+ *  - lockType: READ or WRITE 
+ * Returns: SUCCESS or FAIL
  */
 int lock(int inumber, int lockType) {
     if (lockType == READ) {
@@ -276,6 +278,13 @@ int lock(int inumber, int lockType) {
     return SUCCESS;
 }
 
+/**
+ * Tries to lock i-node rwlock.
+ * Input:
+ *  - inumber: number of the i-node being locked
+ *  - lockType: READ or WRITE 
+ * Returns: SUCCESS or FAIL
+ */
 int tryLock(int inumber, int lockType) {
     if (lockType == READ) {
         if (tryLockRead(inumber)) {
@@ -290,6 +299,12 @@ int tryLock(int inumber, int lockType) {
     return SUCCESS;
 }
 
+/**
+ * Locks i-node rwlock on READ.
+ * Input:
+ *  - inumber: number of the i-node being locked
+ * Returns: SUCCESS or FAIL
+ */
 int lockRead(int inumber) {
     if (!pthread_rwlock_rdlock(&inode_table[inumber].rwl)) {
         printf("Sucessfully locked lockRead() inode %d!\n", inumber);
@@ -300,6 +315,12 @@ int lockRead(int inumber) {
     return SUCCESS;
 }
 
+/**
+ * Locks i-node rwlock on WRITE.
+ * Input:
+ *  - inumber: number of the i-node being locked
+ * Returns: SUCCESS or FAIL
+ */
 int lockWrite(int inumber) {
     if (!pthread_rwlock_wrlock(&inode_table[inumber].rwl)) {
         printf("Sucessfully locked lockWrite() inode %d!\n", inumber);
@@ -310,6 +331,12 @@ int lockWrite(int inumber) {
     return SUCCESS;
 }
 
+/**
+ * Tries to lock i-node rwlock on READ.
+ * Input:
+ *  - inumber: number of the i-node trying to be locked
+ * Returns: SUCCESS or FAIL
+ */
 int tryLockRead(int inumber) {
     if (!pthread_rwlock_tryrdlock(&inode_table[inumber].rwl)) {
         printf("Sucessfully locked tryLockRead() inode %d!\n", inumber);
@@ -320,6 +347,13 @@ int tryLockRead(int inumber) {
     return SUCCESS;
 }
 
+
+/**
+ * Tries to lock i-node rwlock on WRITE.
+ * Input:
+ *  - inumber: number of the i-node trying to be locked
+ * Returns: SUCCESS or FAIL
+ */
 int tryLockWrite(int inumber) {
     if (!pthread_rwlock_trywrlock(&inode_table[inumber].rwl)) {
         printf("Sucessfully locked tryLockWrite() inode %d!\n", inumber);
@@ -331,6 +365,11 @@ int tryLockWrite(int inumber) {
 }
 
 
+/**
+ * Unlocks i-node rwlock.
+ * Input:
+ *  - inumber: number of the i-node being unlocked.
+ */
 void unlock(int inumber) {
     if (pthread_rwlock_unlock(&inode_table[inumber].rwl)) { 
         fprintf(stderr, "Error unlocking inode %d's rwl!\n", inumber);
@@ -339,6 +378,12 @@ void unlock(int inumber) {
     printf("Sucessfully unlocked inode %d!\n", inumber);
 }
 
+/**
+ * Unlocks array of inumbers.
+ * Input:
+ *  - inumbers: array containing locked i-nodes
+ *  - size: length of inumbers' array
+ */
 void unlockAll(int inumbers[], int size) {
     for (int i = size-1; i >= 0; --i) {
         unlock(inumbers[i]);

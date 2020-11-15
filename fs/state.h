@@ -19,30 +19,20 @@
 
 #define DELAY 50000
 
-/*
- * Contains the name of the entry and respective i-number
- */
 typedef struct dirEntry {
 	char name[MAX_FILE_NAME];
 	int inumber;
 } DirEntry;
 
-/*
- * Data is either text (file) or entries (DirEntry)
- */
 union Data {
 	char *fileContents; /* for files */
 	DirEntry *dirEntries; /* for directories */
 };
 
-/*
- * I-node definition
- */
 typedef struct inode_t {    
 	type nodeType;
 	union Data data;
-	pthread_rwlock_t rwl; /* Trinco fino */
-    /* more i-node attributes will be added in future exercises */
+	pthread_rwlock_t rwl;
 } inode_t;
 
 inode_t inode_table[INODE_TABLE_SIZE];
