@@ -1,10 +1,20 @@
 #!/bin/bash
-mkdir -p $2
-for i in $(seq 1 $3);
+
+# variables
+inputdir=$1
+outputdir=$2
+maxthreads=$3
+
+# argument validation
+[ ! -d "$inputdir" ] && { echo "Input directory $inputdir doesn't exist. Please try again."; exit 1; }
+[ ! -d "$outputdir" ] && { echo "Output directory $outputdir doesn't exist. Please try again."; exit 1; }
+[ ! $maxthreads -gt 0 ] && { echo "Max number of threads must be greater than 0. Please try again."; exit 1; }
+
+for i in $(seq 1 $maxthreads);
 do
-    for file in "$1"/*; 
+    for file in "$inputdir"/*; 
     do
         echo "InputFile=$file NumThreads=$i"
-        ./tecnicofs $file $2/"$(basename $file .txt)-$i".txt $i | grep -A1 "TecnicoFS completed in"
+        ./tecnicofs $file $outputdir/"$(basename $file .txt)-$i".txt $i | grep -A1 "TecnicoFS completed in"
     done
 done

@@ -150,7 +150,6 @@ int lookup_sub_node(char *name, DirEntry *entries, bool write) {
 	for (int i = 0; i < MAX_DIR_ENTRIES; i++) {
         if (entries[i].inumber != FREE_INODE && strcmp(entries[i].name, name) == 0) {
             if (write){
-                printf("PullUp with name %s", name);
                 if(!tryLock(entries[i].inumber, WRITE) &&
                     entries[i].inumber != FREE_INODE &&
                     !strcmp(entries[i].name, name))

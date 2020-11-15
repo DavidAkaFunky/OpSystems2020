@@ -406,9 +406,19 @@ int move(char* oldPath, char* newPath) {
 	if (flag) {
 		old_parent_inumber = lookupMove(old_parent_name, activeLocks, &numActiveLocks);
 		new_parent_inumber = lookupMove(new_parent_name, activeLocks, &numActiveLocks);
+		if (inumber == new_parent_inumber) {
+			printf("failed to move %s to %s, can't move directory to itself.\n", oldPath, newPath);
+			unlockAll(activeLocks, numActiveLocks);
+			return FAIL;
+		}
 	} else {
 		new_parent_inumber = lookupMove(new_parent_name, activeLocks, &numActiveLocks);
 		old_parent_inumber = lookupMove(old_parent_name, activeLocks, &numActiveLocks);
+		if (inumber == new_parent_inumber) {
+			printf("failed to move %s to %s, can't move directory to itself.\n", oldPath, newPath);
+			unlockAll(activeLocks, numActiveLocks);
+			return FAIL;
+		}
 	}
 
 	dir_add_entry(new_parent_inumber, inumber, new_child_name);
@@ -416,82 +426,6 @@ int move(char* oldPath, char* newPath) {
 	unlockAll(activeLocks, numActiveLocks);
 	return SUCCESS;
 }
-/*
-int move(char* oldPath, char* newPath){
-	int activeLocks[INODE_TABLE_SIZE], j = 0;
-	
-
-
-
-	int inumber = lookupMove(oldPath, activeLocks, &j, 1);
-	printf("------ OLD CHILD INUMBER ------\n");
-	int inumber = lookup(oldPath, activeLocks, &j, false);
-
-
-	CHECK 
-	if (inumber == FAIL) {
-		printf("failed to move from %s to %s, there's no file or dir with the old path name\n", oldPath, newPath);
-		unlockAll(activeLocks, j);
-		return FAIL;
-	}
-
-	unlockAll(activeLocks, j);
-	memset(activeLocks, 0, sizeof(activeLocks));
- 	j=0;
-
-
-	char *old_parent_name, *old_child_name, oldPath_copy[MAX_FILE_NAME];
-	strcpy(oldPath_copy, oldPath);
-	split_parent_child_from_path(oldPath_copy, &old_parent_name, &old_child_name);
-
-	printf("------ OLD PARENT INUMBER ------\n");
-
-	int old_parent_inumber = lookup(old_parent_name, activeLocks, &j, true);
-
-	char *new_parent_name, *new_child_name, newPath_copy[MAX_FILE_NAME];
-	strcpy(newPath_copy, newPath);
-	split_parent_child_from_path(newPath_copy, &new_parent_name, &new_child_name);
-
-	printf("------ NEW PARENT INUMBER ------\n");
-	int new_parent_inumber = lookup(new_parent_name, activeLocks, &j, false);
-
-	unlockAll(activeLocks, j);
-	memset(activeLocks, 0, sizeof(activeLocks));
- 	j=0;
-	
-	CHECK 
-	if (new_parent_inumber == FAIL) {
-		printf("failed to move from %s to %s, there's no file or dir with the new parent name\n", oldPath, newPath);
-		unlockAll(activeLocks, j);
-		return FAIL;
-	}
-
-	union Data new_pdata;
-	type new_pType;
-	inode_get(new_parent_inumber, &new_pType, &new_pdata);
-
-	CHECK
-	if (new_pType != T_DIRECTORY) {
-		printf("failed to move from %s to %s, there's a file with the new parent name, not a dir\n", oldPath, newPath);
-		unlockAll(activeLocks, j);
-		return FAIL;
-	}
-
-	CHECK
-	printf("------ NEW CHILD ------\n");
-	if (lookup(newPath, activeLocks, &j, false) != FAIL){
-		printf("failed to move from %s to %s, there's a file or dir with the new path name\n", oldPath, newPath);
-		unlockAll(activeLocks, j);
-		return FAIL;
-	}
-
-	dir_add_entry(new_parent_inumber, inumber, new_child_name);
-	dir_reset_entry(old_parent_inumber, inumber);
-
-	unlockAll(activeLocks, j);
-	return SUCCESS;
-}
-*/
 
 /*
  * Prints tecnicofs tree.
