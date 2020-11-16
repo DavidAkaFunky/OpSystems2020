@@ -154,9 +154,9 @@ void processInput(FILE* fp) {
     /* Critical section to global flag */
     pthread_mutex_lock(&mutex);
     allInserted = true;
-    pthread_mutex_unlock(&mutex);
     /* Release all threads waiting for new command to be added to buffer */
-    pthread_cond_broadcast(&condIns);
+    pthread_cond_broadcast(&condRem);
+    pthread_mutex_unlock(&mutex);
 }
 
 /* 

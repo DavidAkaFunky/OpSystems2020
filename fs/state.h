@@ -17,7 +17,7 @@
 #define SUCCESS 0
 #define FAIL -1
 
-#define DELAY 50000
+#define DELAY 0
 
 typedef struct dirEntry {
 	char name[MAX_FILE_NAME];
