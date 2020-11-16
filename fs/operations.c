@@ -128,7 +128,7 @@ int create(char *name, type nodeType) {
 	}
 
 	/* if file already exists, can't create it */
-	if (lookup_sub_node(child_name, pdata.dirEntries) != FAIL) {
+	if (lookup_sub_node(child_name, pdata.dirEntries, false) != FAIL) {
 		printf("failed to create %s, already exists in dir %s\n",
 		       child_name, parent_name);
 		unlockAll(activeLocks, numActiveLocks);
@@ -198,7 +198,7 @@ int delete(char *name) {
 		return FAIL;
 	}
 
-	child_inumber = lookup_sub_node(child_name, pdata.dirEntries);
+	child_inumber = lookup_sub_node(child_name, pdata.dirEntries, true);
 
 	if (child_inumber == FAIL) {
 		printf("could not delete %s, does not exist in dir %s\n",
@@ -206,9 +206,9 @@ int delete(char *name) {
 		unlockAll(activeLocks, numActiveLocks);
 		return FAIL;
 	}
-	
-	lock(child_inumber, WRITE);
+
 	activeLocks[numActiveLocks++] = child_inumber;
+
 	inode_get(child_inumber, &cType, &cdata);
 
 	if (cType == T_DIRECTORY && is_dir_empty(cdata.dirEntries) == FAIL) {
@@ -270,23 +270,22 @@ int lookup(char *name, int * activeLocks, int * numActiveLocks, bool write) {
 	} else {
 		lock(current_inumber, READ);
 	}
-	activeLocks[(*numActiveLocks)++] = current_inumber;
+
+	/* get root inode data */
 	inode_get(current_inumber, &nType, &data);
 
+	activeLocks[(*numActiveLocks)++] = current_inumber;
+
 	/* search for all sub nodes */
-	while (path && (current_inumber = lookup_sub_node(path, data.dirEntries)) != FAIL) {
+	while (path && (current_inumber = lookup_sub_node(path, data.dirEntries, false)) != FAIL) {
 		path = strtok_r(NULL, delim, &saveptr);
-		if (!path && write) {
-			if (!lock(current_inumber, WRITE)) {
+		if (!path && write && !lock(current_inumber, WRITE))
+			activeLocks[(*numActiveLocks)++] = current_inumber;
+		else if (!lock(current_inumber, READ))
 				activeLocks[(*numActiveLocks)++] = current_inumber;
-			}
-		} else {
-			if (!lock(current_inumber, READ)) {
-				activeLocks[(*numActiveLocks)++] = current_inumber;
-			}
-		}
 		inode_get(current_inumber, &nType, &data);
 	}
+
 	return current_inumber;
 }
 
@@ -313,27 +312,22 @@ int lookupMove(char *name, int * activeLocks, int * numActiveLocks) {
 	type nType;
 	union Data data;
 
+
 	/* Starting if strtok returns NULL parent  */
 	char *path = strtok_r(full_path, delim, &saveptr);
 	if (!path) {
 		tryLock(current_inumber, WRITE); 
 		activeLocks[(*numActiveLocks)++] = current_inumber;
-	} else {
-		tryLock(current_inumber, READ);
-		activeLocks[(*numActiveLocks)++] = current_inumber;
 	}
+
 	inode_get(current_inumber, &nType, &data);
 	
 	/* TryLock write last i-node from path */
-	while (path && (current_inumber = lookup_sub_node(path, data.dirEntries)) != FAIL) {
+	while (path && (current_inumber = lookup_sub_node(path, data.dirEntries, false)) != FAIL) {
 		path = strtok_r(NULL, delim, &saveptr);
 		if (!path) {
 			/* Try lock due to concurrent threads may be deleting this node */
 			if (!tryLock(current_inumber, WRITE)) {
-				activeLocks[(*numActiveLocks)++] = current_inumber;
-			}
-		} else {
-			if (!tryLock(current_inumber, READ)) {
 				activeLocks[(*numActiveLocks)++] = current_inumber;
 			}
 		}

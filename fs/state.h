@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <pthread.h>
 #include <stdbool.h>
-#include <errno.h>
 #include "../tecnicofs-api-constants.h"
 
 /* FS root inode number */
@@ -18,7 +17,7 @@
 #define SUCCESS 0
 #define FAIL -1
 
-#define DELAY 0
+#define DELAY 50000
 
 typedef struct dirEntry {
 	char name[MAX_FILE_NAME];
@@ -44,7 +43,7 @@ void inode_table_destroy();
 int inode_create(type nType);
 int inode_delete(int inumber);
 int inode_get(int inumber, type *nType, union Data *data);
-int lookup_sub_node(char *name, DirEntry *entries);
+int lookup_sub_node(char *name, DirEntry *entries, bool write);
 int dir_reset_entry(int inumber, int sub_inumber);
 int dir_add_entry(int inumber, int sub_inumber, char *sub_name);
 int tryLock(int inumber, int lockType);

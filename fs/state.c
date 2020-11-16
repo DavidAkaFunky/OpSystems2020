@@ -142,15 +142,25 @@ int inode_get(int inumber, type *nType, union Data *data) {
  *  - inumber: found node's inumber
  *  - FAIL: if not found
  */
-int lookup_sub_node(char *name, DirEntry *entries) {
+int lookup_sub_node(char *name, DirEntry *entries, bool write) {
+ 
 	if (entries == NULL) {
 		return FAIL;
 	}
 	for (int i = 0; i < MAX_DIR_ENTRIES; i++) {
         if (entries[i].inumber != FREE_INODE && strcmp(entries[i].name, name) == 0) {
+            if (write) {
+                if(!tryLock(entries[i].inumber, WRITE) &&
+                    entries[i].inumber != FREE_INODE &&
+                    !strcmp(entries[i].name, name))
+                    return entries[i].inumber;
+                else
+                    break;
+            }
             return entries[i].inumber;
         }
     }
+	
 	return FAIL;
 }
 
@@ -296,12 +306,8 @@ int tryLock(int inumber, int lockType) {
  * Returns: SUCCESS or FAIL
  */
 int lockRead(int inumber) {
-    if (!pthread_rwlock_rdlock(&inode_table[inumber].rwl)) {
-        printf("Sucessfully locked lockRead() inode %d!\n", inumber);
-    } else {
-        printf("The lockRead() failed in inode %d!\n", inumber);
+    if (pthread_rwlock_rdlock(&inode_table[inumber].rwl))
         return FAIL;
-    }
     return SUCCESS;
 }
 
@@ -312,12 +318,8 @@ int lockRead(int inumber) {
  * Returns: SUCCESS or FAIL
  */
 int lockWrite(int inumber) {
-    if (!pthread_rwlock_wrlock(&inode_table[inumber].rwl)) {
-        printf("Sucessfully locked lockWrite() inode %d!\n", inumber);
-    } else {
-        printf("The lockWrite() failed in %d inode!\n", inumber);
+    if (pthread_rwlock_wrlock(&inode_table[inumber].rwl))
         return FAIL;
-    }
     return SUCCESS;
 }
 
@@ -328,14 +330,8 @@ int lockWrite(int inumber) {
  * Returns: SUCCESS or FAIL
  */
 int tryLockRead(int inumber) {
-    int returnTryRead = pthread_rwlock_tryrdlock(&inode_table[inumber].rwl);
-    if (!returnTryRead) {
-        printf("Sucessfully locked tryLockRead() inode %d!\n", inumber);
-    } 
-    else if (returnTryRead == EDEADLK) {
-        fprintf(stderr, "The tryLockRead() failed in inode %d!\n", inumber);
-        exit(EXIT_FAILURE);
-    }
+    if (pthread_rwlock_tryrdlock(&inode_table[inumber].rwl))
+        return FAIL;
     return SUCCESS;
 }
 
@@ -347,14 +343,8 @@ int tryLockRead(int inumber) {
  * Returns: SUCCESS or FAIL
  */
 int tryLockWrite(int inumber) {
-    int returnTryWrite = pthread_rwlock_trywrlock(&inode_table[inumber].rwl);
-    if (!returnTryWrite) {
-        printf("Sucessfully locked tryLockRead() inode %d!\n", inumber);
-    } 
-    else if (returnTryWrite == EDEADLK) {
-        fprintf(stderr, "The tryLockRead() failed in inode %d!\n", inumber);
-        exit(EXIT_FAILURE);
-    }
+    if (pthread_rwlock_trywrlock(&inode_table[inumber].rwl))
+        return FAIL;
     return SUCCESS;
 }
 
