@@ -48,10 +48,10 @@ void insertCommand(char* data) {
  *  - cmd: pointer that'll store command read from buffer
  */
 void removeCommand(char * cmd) {
-    while (!allInserted && counter == 0) {
+    while (allInserted == false && counter == 0) {
         pthread_cond_wait(&condRem, &mutex);
     }
-    if (allInserted && counter == 0) {
+    if (counter == 0) {
         return;
     }
     strcpy(cmd, inputCommands[condrem]);
@@ -155,9 +155,9 @@ void processInput(FILE* fp) {
     /* Critical section to global flag */
     pthread_mutex_lock(&mutex);
     allInserted = true;
-    pthread_mutex_unlock(&mutex);
     /* Release all threads waiting for new command to be added to buffer */
     pthread_cond_broadcast(&condIns);
+    pthread_mutex_unlock(&mutex);
 }
 
 /* 
@@ -241,8 +241,6 @@ void applyCommands() {
             }
         }
     }
-    /* Release all threads waiting for "counter" to differ from 0 */
-    pthread_cond_broadcast(&condRem);
 }
 
 
