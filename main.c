@@ -10,11 +10,8 @@
 #define MAX_COMMANDS 10
 #define MAX_INPUT_SIZE 100
 
-// Producer = insertCommand
-// Consumer = removeCommand
 int numberThreads = 0;
 int numberCommands = 0;
-bool allInserted = false;
 
 char inputCommands[MAX_COMMANDS][MAX_INPUT_SIZE];
 
@@ -27,7 +24,7 @@ int insert = 0, headQueue = 0;
 /**
  * Inserts commands from input file to buffer inputCommands
  * Input:
- *  - data: line from input file to be added to buffer.s
+ *  - data: line from input file to be added to buffer.
  */
 void insertCommand(char* data) {
     pthread_mutex_lock(&mutex);
@@ -43,15 +40,15 @@ void insertCommand(char* data) {
 
 /**
  * Reads commands from buffer.
- * Input:
- *  - cmd: pointer that'll store command read from buffer
+ * Return:
+ *  - command: string in headQueue index of the buffer
  */
 
 char * removeCommand() {
-    char * command = inputCommands[headQueue++];
+    char * command = inputCommands[headQueue];
     if (numberCommands > 0) {
         numberCommands--;
-        headQueue %= MAX_COMMANDS;
+        headQueue = (headQueue + 1) % MAX_COMMANDS;
         return command;
     }
     return NULL;
@@ -115,7 +112,11 @@ void validateNumThreads(char* numThreads) {
     numberThreads = n;
 }
 
-void eofProcess() {
+/**
+ * Alternative to global flag.
+ * Injects commands to let consumer threads know that the buffer has been all read.
+ */
+void EOFProcess() {
     for (int i = 0; i < numberThreads; ++i) {
         insertCommand("x x x");
     }
@@ -168,7 +169,7 @@ void processInput(FILE* fp) {
             }
         }
     }
-    eofProcess();
+    EOFProcess();
 }
 
 /* 
@@ -192,15 +193,15 @@ void processInput_aux(char* inputPath) {
 void applyCommands() {
     while (true) {
         pthread_mutex_lock(&mutex);
-        /* If allInserted flag is set and counter = 0, no remaining commands on input file to be read 
-        and inputCommands buffer is empty, so applyCommands can finish */
         while (numberCommands == 0) pthread_cond_wait(&condCons, &mutex);
         const char * commandTemp = removeCommand();
         if (commandTemp == NULL) {
+            /* Release producer thread */
             pthread_cond_signal(&condProd);
             pthread_mutex_unlock(&mutex);
             continue;
         }
+        /* to free inputCommands asap */
         char command[MAX_INPUT_SIZE];
         strcpy(command, commandTemp);
 
@@ -269,6 +270,7 @@ void applyCommands() {
  */
 void startThreadPool(char* inputPath) {
     pthread_t tid[numberThreads];
+    /* Create consuming threads */
     for (int i = 0; i < numberThreads; i++) {
         if (pthread_create(&tid[i], NULL, (void *) applyCommands, NULL) != 0) {
             fprintf(stderr, "Thread not created!\n");

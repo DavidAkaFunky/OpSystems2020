@@ -71,7 +71,6 @@ void destroy_fs() {
  *  - entries: entries of directory
  * Returns: SUCCESS or FAIL
  */
-
 int is_dir_empty(DirEntry *dirEntries) {
 	if (dirEntries == NULL) {
 		return FAIL;
@@ -84,6 +83,13 @@ int is_dir_empty(DirEntry *dirEntries) {
 	return SUCCESS;
 }
 
+/**
+ * Calls create function with local variables.
+ * Input:
+ *  - name: path of node
+ *  - nodeType: type of node
+ * Returns: SUCCESS or FAIL
+ */
 int create_aux(char *name, type nodeType) {
 	int activeLocks[INODE_TABLE_SIZE], numActiveLocks = 0;
 	int retVal = create(name, nodeType, activeLocks, &numActiveLocks);
@@ -96,6 +102,8 @@ int create_aux(char *name, type nodeType) {
  * Input:
  *  - name: path of node
  *  - nodeType: type of node
+ *  - activeLocks: array containing active locks
+ *  - numActiveLocks: activeLocks's length
  * Returns: SUCCESS or FAIL
  */
 int create(char *name, type nodeType, int *activeLocks, int *numActiveLocks) {
@@ -157,7 +165,12 @@ int create(char *name, type nodeType, int *activeLocks, int *numActiveLocks) {
 	return SUCCESS;
 }
 
-
+/**
+ * Calls delete function with local variables.
+ * Input:
+ *  - name: path of node
+ * Returns: SUCCESS or FAIL
+ */
 int delete_aux(char *name) {
 	int activeLocks[INODE_TABLE_SIZE], numActiveLocks = 0;
 	int retVal = delete(name, activeLocks, &numActiveLocks);
@@ -169,6 +182,8 @@ int delete_aux(char *name) {
  * Deletes a node given a path.
  * Input:
  *  - name: path of node
+ *  - activeLocks: array containing active locks
+ *  - numActiveLocks: activeLocks's length
  * Returns: SUCCESS or FAIL
  */
 int delete(char * name, int * activeLocks, int * numActiveLocks) {
@@ -233,6 +248,13 @@ int delete(char * name, int * activeLocks, int * numActiveLocks) {
 	return SUCCESS;
 }
 
+/**
+ * Checks if inumber is currently locked.
+ * Input:
+ *  - inumber: number being checked
+ *  - activeLocks: array containing active locks
+ *  - numActiveLocks: activeLocks's length
+ */
 int isLocked(int inumber, int * activeLocks, int numActiveLocks) {
 	for (int i = 0; i < numActiveLocks; ++i) {
 		if (activeLocks[i] == inumber) {
@@ -242,7 +264,14 @@ int isLocked(int inumber, int * activeLocks, int numActiveLocks) {
 	return 0;
 }
 
-
+/*
+ * Calls lookup function with local variables.
+ * Input:
+ *  - name: path of node
+ * Returns: 
+ *  inumber: identifier of the i-node, if found
+ *     FAIL: otherwise
+ */
 int lookup_aux(char * name) {
 	int activeLocks[INODE_TABLE_SIZE], numActiveLocks = 0;
 	int search = lookup(name, activeLocks, &numActiveLocks, false);
@@ -254,8 +283,8 @@ int lookup_aux(char * name) {
  * Lookup for a given path.
  * Input:
  *  - name: path of node
- *  - activeLocks: pointer to array of active rwlocks
- *  - numActiveLocks: length of activeLocks array
+ *  - activeLocks: array containing active locks
+ *  - numActiveLocks: activeLocks's length
  *  - write: if true, the last node on lock will be locked on WRITE
  * Returns:
  *  inumber: identifier of the i-node, if found
@@ -305,6 +334,13 @@ int lookup(char *name, int * activeLocks, int * numActiveLocks, bool write) {
 	return current_inumber;
 }
 
+/**
+ * Calls move function with local variables
+ * Input:
+ *  - oldPath: path of node to be moved. 
+ *  - newPath: path where i-node will be moved to
+ * Returns: SUCCESS or FAIL
+ */
 int move_aux(char * oldPath, char * newPath) {
 	int activeLocks[INODE_TABLE_SIZE], numActiveLocks = 0;
 	int search = move(oldPath, newPath, activeLocks, &numActiveLocks);
@@ -317,8 +353,9 @@ int move_aux(char * oldPath, char * newPath) {
  * Input:
  *  - oldPath: path of node to be moved. 
  *  - newPath: path where i-node will be moved to
- * Returns:
- *  SUCCESS or FAIL
+ *  - activeLocks: array containing active locks
+ *  - numActiveLocks: activeLocks's length
+ * Returns: SUCCESS or FAIL
  */
 int move(char * oldPath, char * newPath, int * activeLocks, int * numActiveLocks) {
 	char *old_parent_name, *old_child_name, oldPath_copy[MAX_FILE_NAME];

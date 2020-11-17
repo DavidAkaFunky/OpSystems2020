@@ -61,7 +61,8 @@ int inode_create(type nType) {
 
     for (int inumber = 0; inumber < INODE_TABLE_SIZE; inumber++) {
         int lockReturn = pthread_rwlock_trywrlock(&(inode_table[inumber].rwl));
-        if (lockReturn == 0) {
+        /* Sucessful try write lock */
+        if (!lockReturn) {
             if (inode_table[inumber].nodeType == T_NONE) {
                 inode_table[inumber].nodeType = nType;
                 if (nType == T_DIRECTORY) {
@@ -76,7 +77,8 @@ int inode_create(type nType) {
                 return inumber;
             }
             unlock(inumber);
-        } else if (lockReturn != EBUSY) {
+        } /* Cases where try write lock MAY fail */
+        else if (lockReturn != EBUSY) {
             fprintf(stderr, "Error locking inode %d\n", inumber);
             exit(EXIT_FAILURE);
         }
@@ -299,8 +301,6 @@ void unlockAll(int inumbers[], int size) {
         unlock(inumbers[i]);
     }
 }
-
-
 
 /*
  * Prints the i-nodes table.
