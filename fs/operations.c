@@ -84,6 +84,12 @@ int is_dir_empty(DirEntry *dirEntries) {
 	return SUCCESS;
 }
 
+int create_aux(char *name, type nodeType) {
+	int activeLocks[INODE_TABLE_SIZE], numActiveLocks = 0;
+	int retVal = create(name, nodeType, activeLocks, &numActiveLocks);
+	unlockAll(activeLocks, numActiveLocks);
+	return retVal;
+}
 
 /*
  * Creates a new node given a path.
@@ -92,27 +98,23 @@ int is_dir_empty(DirEntry *dirEntries) {
  *  - nodeType: type of node
  * Returns: SUCCESS or FAIL
  */
-int create(char *name, type nodeType) {
-
+int create(char *name, type nodeType, int *activeLocks, int *numActiveLocks) {
 	int parent_inumber, child_inumber;
 	char *parent_name, *child_name, name_copy[MAX_FILE_NAME];
 	/* use for copy */
 	type pType;
 	union Data pdata;
 
-	int activeLocks[INODE_TABLE_SIZE], numActiveLocks = 0;
-
 	strcpy(name_copy, name);
 	/* produces path to child : i.e. "c s1/s2/s3 d" -> parent_name = "s1/s2" ; child_name = "s3" */
 	/* idem to file */
 	split_parent_child_from_path(name_copy, &parent_name, &child_name);
 
-	parent_inumber = lookup(parent_name, activeLocks, &numActiveLocks, true);
+	parent_inumber = lookup(parent_name, activeLocks, numActiveLocks, true);
 
 	if (parent_inumber == FAIL) {
 		printf("failed to create %s, invalid parent dir %s\n",
 		        name, parent_name);
-		unlockAll(activeLocks, numActiveLocks);
 		return FAIL;
 	}
 
@@ -123,15 +125,13 @@ int create(char *name, type nodeType) {
 	if(pType != T_DIRECTORY) {
 		printf("failed to create %s, parent %s is not a dir\n",
 		        name, parent_name);
-		unlockAll(activeLocks, numActiveLocks);
 		return FAIL;
 	}
 
 	/* if file already exists, can't create it */
-	if (lookup_sub_node(child_name, pdata.dirEntries, false) != FAIL) {
+	if (lookup_sub_node(child_name, pdata.dirEntries) != FAIL) {
 		printf("failed to create %s, already exists in dir %s\n",
 		       child_name, parent_name);
-		unlockAll(activeLocks, numActiveLocks);
 		return FAIL;
 	}
 
@@ -142,24 +142,28 @@ int create(char *name, type nodeType) {
 	if (child_inumber == FAIL) {
 		printf("failed to create %s in %s, couldn't allocate inode\n",
 		        child_name, parent_name);
-		unlockAll(activeLocks, numActiveLocks);
 		return FAIL;
 	}
 
-	activeLocks[numActiveLocks++] = child_inumber;
+	activeLocks[(*numActiveLocks)++] = child_inumber;
 
 	/* add entry to parent directory */
 	if (dir_add_entry(parent_inumber, child_inumber, child_name) == FAIL) {
 		printf("could not add entry %s in dir %s\n",
 		       child_name, parent_name);
-		unlockAll(activeLocks, numActiveLocks);
 		return FAIL;
 	}
 
-	unlockAll(activeLocks, numActiveLocks);
 	return SUCCESS;
 }
 
+
+int delete_aux(char *name) {
+	int activeLocks[INODE_TABLE_SIZE], numActiveLocks = 0;
+	int retVal = delete(name, activeLocks, &numActiveLocks);
+	unlockAll(activeLocks, numActiveLocks);
+	return retVal;
+}
 
 /*
  * Deletes a node given a path.
@@ -167,25 +171,22 @@ int create(char *name, type nodeType) {
  *  - name: path of node
  * Returns: SUCCESS or FAIL
  */
-int delete(char *name) {
-
+int delete(char * name, int * activeLocks, int * numActiveLocks) {
 	int parent_inumber, child_inumber;
 	char *parent_name, *child_name, name_copy[MAX_FILE_NAME];
+
 	/* use for copy */
 	type pType, cType;
 	union Data pdata, cdata;
 
-	int activeLocks[INODE_TABLE_SIZE], numActiveLocks = 0;
-
 	strcpy(name_copy, name);
 	split_parent_child_from_path(name_copy, &parent_name, &child_name);
 
-	parent_inumber = lookup(parent_name, activeLocks, &numActiveLocks, true);
+	parent_inumber = lookup(parent_name, activeLocks, numActiveLocks, true);
 
 	if (parent_inumber == FAIL) {
 		printf("failed to delete %s, invalid parent dir %s\n",
 		        child_name, parent_name);
-		unlockAll(activeLocks, numActiveLocks);
 		return FAIL;
 	}
 	
@@ -194,27 +195,25 @@ int delete(char *name) {
 	if(pType != T_DIRECTORY) {
 		printf("failed to delete %s, parent %s is not a dir\n",
 		        child_name, parent_name);
-		unlockAll(activeLocks, numActiveLocks);
 		return FAIL;
 	}
 
-	child_inumber = lookup_sub_node(child_name, pdata.dirEntries, true);
+	child_inumber = lookup_sub_node(child_name, pdata.dirEntries);
 
 	if (child_inumber == FAIL) {
 		printf("could not delete %s, does not exist in dir %s\n",
 		       name, parent_name);
-		unlockAll(activeLocks, numActiveLocks);
 		return FAIL;
 	}
 
-	activeLocks[numActiveLocks++] = child_inumber;
+	lock(child_inumber, WRITE);
+	activeLocks[(*numActiveLocks)++] = child_inumber;
 
 	inode_get(child_inumber, &cType, &cdata);
 
 	if (cType == T_DIRECTORY && is_dir_empty(cdata.dirEntries) == FAIL) {
 		printf("could not delete %s: is a directory and not empty\n",
 		       name);
-		unlockAll(activeLocks, numActiveLocks);
 		return FAIL;
 	}
 
@@ -222,22 +221,34 @@ int delete(char *name) {
 	if (dir_reset_entry(parent_inumber, child_inumber) == FAIL) {
 		printf("failed to delete %s from dir %s\n",
 		       child_name, parent_name);
-		unlockAll(activeLocks, numActiveLocks);
 		return FAIL;
 	}
 
 	if (inode_delete(child_inumber) == FAIL) {
 		printf("could not delete inode number %d from dir %s\n",
 		       child_inumber, parent_name);
-		unlockAll(activeLocks, numActiveLocks);
 		return FAIL;
 	}
-
-	unlockAll(activeLocks, numActiveLocks);
 
 	return SUCCESS;
 }
 
+int isLocked(int inumber, int * activeLocks, int numActiveLocks) {
+	for (int i = 0; i < numActiveLocks; ++i) {
+		if (activeLocks[i] == inumber) {
+			return 1;
+		}
+	}
+	return 0;
+}
+
+
+int lookup_aux(char * name) {
+	int activeLocks[INODE_TABLE_SIZE], numActiveLocks = 0;
+	int search = lookup(name, activeLocks, &numActiveLocks, false);
+	unlockAll(activeLocks, numActiveLocks);
+	return search;
+}
 
 /*
  * Lookup for a given path.
@@ -254,7 +265,7 @@ int lookup(char *name, int * activeLocks, int * numActiveLocks, bool write) {
 	char full_path[MAX_FILE_NAME];
 	char delim[] = "/";
 	char * saveptr;
-
+	
 	strcpy(full_path, name);
 
 	/* start at root node */
@@ -262,193 +273,43 @@ int lookup(char *name, int * activeLocks, int * numActiveLocks, bool write) {
 	/* use for copy */
 	type nType;
 	union Data data;
-
 	char *path = strtok_r(full_path, delim, &saveptr);
-	/* inode creation at root */
-	if (!path && write) {
-		lock(current_inumber, WRITE);
-	} else {
-		lock(current_inumber, READ);
+
+	/* Avoid double locks and validate current_inumber's ~lock status */
+	if (!isLocked(current_inumber, activeLocks, *numActiveLocks)) {
+		if (!path && write) {
+			lock(current_inumber, WRITE);
+		} else {
+			lock(current_inumber, READ);
+		}
+		activeLocks[(*numActiveLocks)++] = current_inumber;
 	}
 
 	/* get root inode data */
 	inode_get(current_inumber, &nType, &data);
 
-	activeLocks[(*numActiveLocks)++] = current_inumber;
-
 	/* search for all sub nodes */
-	while (path && (current_inumber = lookup_sub_node(path, data.dirEntries, false)) != FAIL) {
+	while (path && (current_inumber = lookup_sub_node(path, data.dirEntries)) != FAIL) {
 		path = strtok_r(NULL, delim, &saveptr);
-		if (!path && write && !lock(current_inumber, WRITE))
-			activeLocks[(*numActiveLocks)++] = current_inumber;
-		else if (!lock(current_inumber, READ))
-				activeLocks[(*numActiveLocks)++] = current_inumber;
-		inode_get(current_inumber, &nType, &data);
-	}
-
-	return current_inumber;
-}
-
-/*
- * Lookup for a given path.
- * Input:
- *  - name: path of node
- *  - activeLocks: pointer to array of active rwlocks
- *  - numActiveLocks: length of activeLocks array
- * Returns:
- *  inumber: identifier of the i-node, if found
- *     FAIL: otherwise
- */
-int lookupMove(char *name, int * activeLocks, int * numActiveLocks) {
-	char full_path[MAX_FILE_NAME];
-	char delim[] = "/";
-	char * saveptr;
-
-	/* Copy pointer name to full path to avoid changes on og string */
-	strcpy(full_path, name);
-
-	/* Start at root */
-	int current_inumber = FS_ROOT;
-	type nType;
-	union Data data;
-
-
-	/* Starting if strtok returns NULL parent  */
-	char *path = strtok_r(full_path, delim, &saveptr);
-	if (!path) {
-		tryLock(current_inumber, WRITE); 
-		activeLocks[(*numActiveLocks)++] = current_inumber;
-	}
-
-	inode_get(current_inumber, &nType, &data);
-	
-	/* TryLock write last i-node from path */
-	while (path && (current_inumber = lookup_sub_node(path, data.dirEntries, false)) != FAIL) {
-		path = strtok_r(NULL, delim, &saveptr);
-		if (!path) {
-			/* Try lock due to concurrent threads may be deleting this node */
-			if (!tryLock(current_inumber, WRITE)) {
-				activeLocks[(*numActiveLocks)++] = current_inumber;
+		if (!isLocked(current_inumber, activeLocks, *numActiveLocks)) {
+			if (!path && write) {
+				lock(current_inumber, WRITE);
+			} else {
+				lock(current_inumber, READ);
 			}
+			activeLocks[(*numActiveLocks)++] = current_inumber;
 		}
 		inode_get(current_inumber, &nType, &data);
 	}
+
 	return current_inumber;
 }
 
-/*
- * Compares paths' lengths.
- * Input:
- *  - oldPath: path of the i-node being moved
- *  - newPath: path to where the i-node will be moved
- *  - flag: memory address where it will be written which path is bigger
- */
-void compareOldNewPaths(const char * oldPath, const char * newPath, int * flag) {
-	int oldCounter = 0, newCounter = 0;
-
-	for (int i = 0; i < strlen(oldPath); ++i) {
-		if (oldPath[i] == '/') {
-			oldCounter++;
-		}
-	}
-
-	for (int i = 0; i < strlen(newPath); ++i) {
-		if (newPath[i] == '/') {
-			newCounter++;
-		}
-	}
-
-	*flag = oldCounter < newCounter ? 1 : 0;
-}
-/*
- * Resets array containing all active locks.
- * Input:
- *  - activeLocks: pointer to array of active rwlocks
- *  - numActiveLocks: length of activeLocks array
- */
-void resetActiveLocks(int * activeLocks, int * numActiveLocks) {
-	unlockAll(activeLocks, *numActiveLocks);
-	memset(activeLocks, 0, sizeof(*activeLocks));
- 	*numActiveLocks = 0;
-}
-
-/*
- * Checks moving i-node's existence.
- * Input:
- *  - oldPath: path of node to be moved
- *  - activeLocks: pointer to array of active rwlocks
- *  - numActiveLocks: length of activeLocks array
- *  - refInumber: memory address from oldPath's i-node inumber
- * Returns:
- *  SUCCESS: oldPath i-node was found
- *     FAIL: otherwise
- */
-int checkOldPath(char * oldPath, int * activeLocks, int * numActiveLocks, int * refInumber) {
-	int inumber;
-
-	/* Returns FAIL if there's not an i-node in "oldPath" */
-	if ((inumber = lookup(oldPath, activeLocks, numActiveLocks, false)) == FAIL) {
-		unlockAll(activeLocks, *numActiveLocks);
-		return FAIL;
-	}
-
-	*refInumber = inumber;
-	resetActiveLocks(activeLocks, numActiveLocks);
-	return SUCCESS;
-}
-
-/*
- * Multiple verifications to validate newPath.
- * Input:
- *  - newPath: path where i-node will be moved to
- *  - activeLocks: pointer to array of active rwlocks
- *  - numActiveLocks: length of activeLocks array
- * 	- inumber: old path's inumber
- * Returns:
- *  SUCCESS: newPath is valid
- *     FAIL: otherwise
- */
-int checkNewPath(char * newPath, int * activeLocks, int * numActiveLocks, int inumber) {
-	char *new_parent_name, *new_child_name, newPath_copy[MAX_FILE_NAME];
-	strcpy(newPath_copy, newPath);
-	split_parent_child_from_path(newPath_copy, &new_parent_name, &new_child_name);
-
-	int new_parent_inumber = lookup(new_parent_name, activeLocks, numActiveLocks, false);
-
-	resetActiveLocks(activeLocks, numActiveLocks);
-	union Data new_pdata;
-	type new_pType;
-	inode_get(new_parent_inumber, &new_pType, &new_pdata);
-	
-	/* Returns FAIL if there's no parent directory to receive the moving i-node */
-	if (new_parent_inumber == FAIL) {
-		printf("failed to move, there's no file or dir with the new parent name in %s\n", newPath);
-		unlockAll(activeLocks, *numActiveLocks);
-		return FAIL;
-	}
-
-	/* Returns FAIL if "newPath"'s parent is not a directory */
-	else if (new_pType != T_DIRECTORY) {
-		printf("failed to move, parent name in %s is not a directory\n", newPath);
-		unlockAll(activeLocks, *numActiveLocks);
-		return FAIL;
-	}
-
-	/* Returns FAIL if there's an i-node with the same name as in "newPath" */
-	else if (lookup(newPath, activeLocks, numActiveLocks, false) != FAIL) {
-		printf("failed to move, there's a file or dir with the new path name\n");
-		unlockAll(activeLocks, *numActiveLocks);
-		return FAIL;
-	}
-	
-	else if (inumber == new_parent_inumber) {
-		printf("failed to move, can't move directory to itself\n");
-		unlockAll(activeLocks, *numActiveLocks);
-		return FAIL;
-	}
-
-	resetActiveLocks(activeLocks, numActiveLocks);
-	return SUCCESS;
+int move_aux(char * oldPath, char * newPath) {
+	int activeLocks[INODE_TABLE_SIZE], numActiveLocks = 0;
+	int search = move(oldPath, newPath, activeLocks, &numActiveLocks);
+	unlockAll(activeLocks, numActiveLocks);
+	return search;
 }
 
 /*
@@ -459,43 +320,74 @@ int checkNewPath(char * newPath, int * activeLocks, int * numActiveLocks, int in
  * Returns:
  *  SUCCESS or FAIL
  */
-int move(char* oldPath, char* newPath) {
-	int activeLocks[INODE_TABLE_SIZE], numActiveLocks = 0;
-	int inumber;
-	int flag;
-	if (checkOldPath(oldPath, activeLocks, &numActiveLocks, &inumber)) {
-		return FAIL;
-	}
-	if (checkNewPath(newPath, activeLocks, &numActiveLocks, inumber)) {
-		return FAIL;
-	} 
-
-	compareOldNewPaths(oldPath, newPath, &flag);
-
+int move(char * oldPath, char * newPath, int * activeLocks, int * numActiveLocks) {
 	char *old_parent_name, *old_child_name, oldPath_copy[MAX_FILE_NAME];
+	char *new_parent_name, *new_child_name, newPath_copy[MAX_FILE_NAME];
+	int old_parent_inumber, new_parent_inumber, moving_inumber;
+	union Data old_pdata, new_pdata;
+	type old_pType, new_pType;
+
 	strcpy(oldPath_copy, oldPath);
 	split_parent_child_from_path(oldPath_copy, &old_parent_name, &old_child_name);
-	int old_parent_inumber;
 
-	char *new_parent_name, *new_child_name, newPath_copy[MAX_FILE_NAME];
 	strcpy(newPath_copy, newPath);
 	split_parent_child_from_path(newPath_copy, &new_parent_name, &new_child_name);
-	int new_parent_inumber;
 
-	if (flag) {
-		/* "oldPath" is shorter than "newPath" */
-		old_parent_inumber = lookupMove(old_parent_name, activeLocks, &numActiveLocks);
-		new_parent_inumber = lookupMove(new_parent_name, activeLocks, &numActiveLocks);		 
+	/* Alphabetical way to order locks */
+	if (strcmp(oldPath, newPath) < 0) {
+		old_parent_inumber = lookup(old_parent_name, activeLocks, numActiveLocks, true);
+		new_parent_inumber = lookup(new_parent_name, activeLocks, numActiveLocks, true);		 
 	} else {
-		/* "newPath" is shorter than "oldPath" */
-		new_parent_inumber = lookupMove(new_parent_name, activeLocks, &numActiveLocks);
-		old_parent_inumber = lookupMove(old_parent_name, activeLocks, &numActiveLocks);
+		new_parent_inumber = lookup(new_parent_name, activeLocks, numActiveLocks, true);
+		old_parent_inumber = lookup(old_parent_name, activeLocks, numActiveLocks, true);
 	}
 
-	dir_add_entry(new_parent_inumber, inumber, new_child_name);
-	dir_reset_entry(old_parent_inumber, inumber);
-	unlockAll(activeLocks, numActiveLocks);
+	/* Invalid paths */
+	if (old_parent_inumber == FAIL || new_parent_inumber == FAIL) {
+		printf("failed to move, invalid input paths\n");
+		return FAIL;
+	}
+
+	inode_get(old_parent_inumber, &old_pType, &old_pdata);
+	inode_get(new_parent_inumber, &new_pType, &new_pdata);
+
+	/* newPath -> parent is not a directory */
+	if (new_pType != T_DIRECTORY) {
+		printf("failed to move, new path's parent i-node is not a directory\n");
+		return FAIL;
+	}
+
+	/* newPath -> parent directory contains an entry with same name as the moving i-node */
+	if (lookup_sub_node(old_child_name, new_pdata.dirEntries) != FAIL) {
+		printf("failed to move, new parent directory already contains an entry named %s\n", old_child_name);
+		return FAIL;
+	}
+
+	/* oldPath -> check if moving i-node exists */
+	if ((moving_inumber = lookup_sub_node(old_child_name, old_pdata.dirEntries)) == FAIL) {
+		printf("failed to move, old parent directory doesn't contain an entry named %s\n", old_child_name);
+		return FAIL;
+	}
+
+	/* oldPath & newPath -> avoid reflexing moves */
+	if (moving_inumber == new_parent_inumber) {
+		printf("failed to move, can't move directory to itself\n");
+		return FAIL;
+	}
+
+	/* reset oldPath entry and add new entry to newPath */
+	if (dir_reset_entry(old_parent_inumber, moving_inumber) == FAIL) {
+		printf("failed to move, couldn't reset %s from dir %s\n", old_child_name, old_parent_name);
+		return FAIL;
+	}
+
+	if (dir_add_entry(new_parent_inumber, moving_inumber, old_child_name) == FAIL) {
+		printf("failed to move, couldn't add %s to dir %s\n", old_child_name, new_parent_name);
+		return FAIL;
+	}
+
 	return SUCCESS;
+
 }
 
 /*

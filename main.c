@@ -21,9 +21,8 @@ char inputCommands[MAX_COMMANDS][MAX_INPUT_SIZE];
 struct timeval begin, end;
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t condIns = PTHREAD_COND_INITIALIZER, condRem = PTHREAD_COND_INITIALIZER;
-int counter = 0;
-int condptr = 0, condrem = 0;
+pthread_cond_t condProd = PTHREAD_COND_INITIALIZER, condCons = PTHREAD_COND_INITIALIZER;
+int insert = 0, headQueue = 0;
 
 /**
  * Inserts commands from input file to buffer inputCommands
@@ -32,13 +31,13 @@ int condptr = 0, condrem = 0;
  */
 void insertCommand(char* data) {
     pthread_mutex_lock(&mutex);
-    while (counter == MAX_COMMANDS) {
-        pthread_cond_wait(&condIns, &mutex);
+    while (numberCommands == MAX_COMMANDS) {
+        pthread_cond_wait(&condProd, &mutex);
     }
-    strcpy(inputCommands[condptr], data);
-    condptr = (condptr + 1) % MAX_COMMANDS;
-    counter++;
-    pthread_cond_signal(&condRem);
+    strcpy(inputCommands[insert++], data);
+    insert %= MAX_COMMANDS;
+    numberCommands++;
+    pthread_cond_signal(&condCons);
     pthread_mutex_unlock(&mutex);
 }
 
@@ -47,16 +46,15 @@ void insertCommand(char* data) {
  * Input:
  *  - cmd: pointer that'll store command read from buffer
  */
-void removeCommand(char * cmd) {
-    while (!allInserted && counter == 0) {
-        pthread_cond_wait(&condRem, &mutex);
+
+char * removeCommand() {
+    char * command = inputCommands[headQueue++];
+    if (numberCommands > 0) {
+        numberCommands--;
+        headQueue %= MAX_COMMANDS;
+        return command;
     }
-    if (allInserted && counter == 0) {
-        return;
-    }
-    strcpy(cmd, inputCommands[condrem]);
-    condrem = (condrem + 1) % MAX_COMMANDS;
-    pthread_cond_signal(&condIns);
+    return NULL;
 }
 
 /**
@@ -85,6 +83,18 @@ void init_fs_aux(int argc) {
  * Prints TecnicoFS execution time and destroys TecnicoFS and i-node table
  */
 void destroy_fs_aux() {
+    if (pthread_mutex_destroy(&mutex)) {
+        fprintf(stderr, "Error destroying mutex!\n");
+        exit(EXIT_FAILURE);
+    }
+    if (pthread_cond_destroy(&condProd)) {
+        fprintf(stderr, "Error destroying producer conditional variable!\n");
+        exit(EXIT_FAILURE);
+    }
+    if (pthread_cond_destroy(&condCons)) {
+        fprintf(stderr, "Error destroying consumer conditional variable!\n");
+        exit(EXIT_FAILURE);
+    }
     destroy_fs();
     printf ("TecnicoFS completed in %.4f seconds.\n",
          (double) (end.tv_usec - begin.tv_usec) / 1000000 +
@@ -103,6 +113,13 @@ void validateNumThreads(char* numThreads) {
         exit(EXIT_FAILURE);
     }
     numberThreads = n;
+}
+
+void eofProcess() {
+    for (int i = 0; i < numberThreads; ++i) {
+        insertCommand("x x x");
+    }
+    pthread_cond_broadcast(&condCons);
 }
 
 /**
@@ -143,7 +160,7 @@ void processInput(FILE* fp) {
                 if(numTokens != 3)
                     errorParse();
                 insertCommand(line);
-                break;           
+                break;        
             case '#':
                 break;
             default: { /* error */
@@ -151,12 +168,7 @@ void processInput(FILE* fp) {
             }
         }
     }
-    /* Critical section to global flag */
-    pthread_mutex_lock(&mutex);
-    allInserted = true;
-    /* Release all threads waiting for new command to be added to buffer */
-    pthread_cond_broadcast(&condRem);
-    pthread_mutex_unlock(&mutex);
+    eofProcess();
 }
 
 /* 
@@ -178,19 +190,23 @@ void processInput_aux(char* inputPath) {
  * Calls operations on different commands read from "inputCommands" buffer
  */
 void applyCommands() {
-    int activeLocks[INODE_TABLE_SIZE], numActiveLocks = 0;
     while (true) {
         pthread_mutex_lock(&mutex);
         /* If allInserted flag is set and counter = 0, no remaining commands on input file to be read 
         and inputCommands buffer is empty, so applyCommands can finish */
-        char command[MAX_INPUT_SIZE];
-        removeCommand(command);
-        if (counter == 0 && allInserted) {
+        while (numberCommands == 0) pthread_cond_wait(&condCons, &mutex);
+        const char * commandTemp = removeCommand();
+        if (commandTemp == NULL) {
+            pthread_cond_signal(&condProd);
             pthread_mutex_unlock(&mutex);
-            break;
+            continue;
         }
-        counter--;
+        char command[MAX_INPUT_SIZE];
+        strcpy(command, commandTemp);
+
+        pthread_cond_signal(&condProd);
         pthread_mutex_unlock(&mutex);
+        
         char token, type;
         char name[MAX_INPUT_SIZE], arg[MAX_INPUT_SIZE];
 
@@ -199,19 +215,20 @@ void applyCommands() {
             fprintf(stderr, "Error: invalid command :%s: in Queue\n", command);
             exit(EXIT_FAILURE);
         }
+
         /* Create third argument is either "d" or "f" */
-        if (numTokens == 3 && strlen(arg) == 1) type = arg[0];
+        type = arg[0];
         int searchResult;
         switch (token) {
             case 'c':
                 switch (type) {
                     case 'f':
                         printf("Create file: %s\n", name);
-                        create(name, T_FILE);
+                        create_aux(name, T_FILE);
                         break;
                     case 'd':
                         printf("Create directory: %s\n", name);
-                        create(name, T_DIRECTORY);
+                        create_aux(name, T_DIRECTORY);
                         break;
                     default:
                         fprintf(stderr, "Error: invalid node type\n");
@@ -220,29 +237,28 @@ void applyCommands() {
                 break;
             case 'l':
                 printf("Searching %s...\n", name);
-                searchResult = lookup(name, activeLocks, &numActiveLocks, false);
+                searchResult = lookup_aux(name);
                 if (searchResult >= 0)
                     printf("Search: %s found\n", name);
                 else
                     printf("Search: %s not found\n", name);
-                resetActiveLocks(activeLocks, &numActiveLocks);
                 break;
             case 'd':
                 printf("Delete: %s\n", name);
-                delete(name);
+                delete_aux(name);
                 break;
             case 'm':
                 printf("Move: %s to %s\n", name, arg);
-                move(name, arg);
+                move_aux(name, arg);
                 break;
+            case 'x':
+                return;
             default: { /* error */
                 fprintf(stderr, "Error: command to apply\n");
                 exit(EXIT_FAILURE);
             }
         }
     }
-    /* Release all threads waiting for "counter" to differ from 0 */
-    pthread_cond_broadcast(&condRem);
 }
 
 
@@ -254,7 +270,7 @@ void applyCommands() {
 void startThreadPool(char* inputPath) {
     pthread_t tid[numberThreads];
     for (int i = 0; i < numberThreads; i++) {
-        if (pthread_create(&tid[i], NULL, (void*) applyCommands, NULL) != 0) {
+        if (pthread_create(&tid[i], NULL, (void *) applyCommands, NULL) != 0) {
             fprintf(stderr, "Thread not created!\n");
             exit(EXIT_FAILURE);
         }
