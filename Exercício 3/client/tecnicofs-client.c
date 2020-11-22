@@ -102,6 +102,7 @@ void *processInput() {
                 if(numTokens != 2)
                     errorParse();
                 //Print TecnicoFS tree
+                break;
             case '#':
                 break;
             default: { /* error */
