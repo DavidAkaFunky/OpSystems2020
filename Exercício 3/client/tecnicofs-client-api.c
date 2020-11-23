@@ -71,7 +71,22 @@ int tfsLookup(char *path) {
   return opReturn;
 }
 
-int setSocketAddresUn(char * path, struct sockaddr_un * addr) {
+int tfsPrint(char* path) {
+  char command[MAX_INPUT_SIZE];
+  int opReturn;
+  sprintf(command, "p %s", path);
+  if (sendto(scsocket, command, strlen(command)+1, 0, (struct sockaddr *) &server_addr, ser_addr_len) < 0) {
+    perror("Client: Error sending in tfsPrint");
+    exit(EXIT_FAILURE);
+  }
+  if (recvfrom(scsocket, &opReturn, sizeof(opReturn), 0, 0, 0) < 0) {
+    perror("Client: Error receiving in tfsPrint");
+    exit(EXIT_FAILURE);
+  }
+  return opReturn;
+}
+
+int setSocketAddressUn(char * path, struct sockaddr_un * addr) {
   if (addr == NULL) { return 0; }
   bzero((char *) addr, sizeof(struct sockaddr_un));
   addr->sun_family = AF_UNIX;
@@ -80,7 +95,7 @@ int setSocketAddresUn(char * path, struct sockaddr_un * addr) {
 }
 
 int tfsMount(char * sockPath) {
-  char client_file[MAX_FILE_NAME] = {"csocket"};
+  char client_file[MAX_FILE_NAME] = {"/tmp/client"};
 
   if ((scsocket = socket(AF_UNIX, SOCK_DGRAM, 0)) == -1) {
     fprintf(stderr, "Client: Error opening server socket\n");
@@ -89,7 +104,7 @@ int tfsMount(char * sockPath) {
 
   unlink(client_file);
 
-  cli_addr_len = setSocketAddresUn(client_file, &client_addr);
+  cli_addr_len = setSocketAddressUn(client_file, &client_addr);
   if (bind(scsocket, (struct sockaddr *) &client_addr, cli_addr_len) < 0) {
     fprintf(stderr, "Client: Error binding client socket\n");
     return EXIT_FAILURE;
@@ -100,7 +115,7 @@ int tfsMount(char * sockPath) {
     return EXIT_FAILURE;
   }
 
-  ser_addr_len = setSocketAddresUn(sockPath, &server_addr);
+  ser_addr_len = setSocketAddressUn(sockPath, &server_addr);
   
   return EXIT_SUCCESS;
 }

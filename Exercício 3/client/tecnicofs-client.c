@@ -43,7 +43,7 @@ void *processInput() {
         int numTokens = sscanf(line, "%c %s %s", &op, arg1, arg2);
 
         /* perform minimal validation */
-        if (numTokens < 1) {
+        if (numTokens < 2) {
             continue;
         }
         switch (op) {
@@ -101,7 +101,9 @@ void *processInput() {
             case 'p':
                 if(numTokens != 2)
                     errorParse();
-                //Print TecnicoFS tree
+                res = tfsPrint(arg1);
+                if (res)
+                  puts("Failed to print");
                 break;
             case '#':
                 break;

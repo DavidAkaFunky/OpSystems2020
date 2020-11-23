@@ -128,13 +128,13 @@ void applyCommands() {
         
         if (bytesReceived < 0) {
             /* Case where peer has perform an orderly shutdown or error has occured */
-            fprintf(stderr, "Server: error receiving message from client\n");
+            perror("Server: error receiving message from client");
             exit(EXIT_FAILURE);
         }
         
         command[bytesReceived] = '\0';
         /* Update client socket - HARDCODED ? */
-        addr_len = setSocketAddressUn("../client/csocket", &client_addr);
+        addr_len = setSocketAddressUn("/tmp/client", &client_addr);
         
         char token;
         char name[MAX_INPUT_SIZE], arg[MAX_INPUT_SIZE];
