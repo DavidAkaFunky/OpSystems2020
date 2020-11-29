@@ -28,8 +28,10 @@ socklen_t ser_addr_len;
  * Called when invalid commands are processed and exits program.
  */
 void errorParse() {
+
     fprintf(stderr, "Error: command invalid\n");
     exit(EXIT_FAILURE);
+
 }
 
 /**
@@ -38,37 +40,49 @@ void errorParse() {
  *  - argc: number of input arguments from stdin.
  */ 
 void init_fs_aux(int argc) {
+
     /* Validate number of input arguments */ 
     if (argc != 3) {
         fprintf(stderr, "Usage: ./tecnicofs numberthreads socketname\n");
         exit(EXIT_FAILURE);
     }
+
     init_fs();
 }
 
-/* 
+/**
  * Prints TecnicoFS tree.
  * Input:
  *  - outputPath: string containing the output file path
  */
 void print_tecnicofs_tree_aux(char* outputPath) {
+
     FILE* fp = fopen(outputPath, "w");
+    
     if (!fp) {
         fprintf(stderr, "Output path invalid, please try again!\n");
         exit(EXIT_FAILURE);
     }
+
     print_tecnicofs_tree(fp);
     fclose(fp);
 }
 
 int setSocketAddressUn(char * path, struct sockaddr_un * addr) {
+
     if (addr == NULL) { return 0; }
     bzero((char *) addr, sizeof(struct sockaddr_un));
     addr->sun_family = AF_UNIX;
     strcpy(addr->sun_path, path);
     return SUN_LEN(addr);
+
 }
 
+/**
+ * Initializes the server socket. 
+ * Input:
+ *  - socketPath: the path where the server socket will be located.
+ */
 void init_socket(char * socketPath) {
 
     if ((scsocket = socket(AF_UNIX, SOCK_DGRAM, 0)) == -1) {
@@ -97,8 +111,7 @@ void init_socket(char * socketPath) {
 }
 
 /**
- * Assigns number of threads inputted to global variable
- * numberThreads.
+ * Assigns number of threads inputted to global variable "numberThreads".
  */
 void validateNumThreads(char * numThreads) {
     int n = atoi(numThreads);
@@ -111,18 +124,79 @@ void validateNumThreads(char * numThreads) {
 }
 
 /**
- * Calls operations on different commands read from "inputCommands" buffer
+ * Calls the appropriate operation for each given command.
+ * Input:
+ *  - command: the command to be applied.
  */
-void applyCommands() {
-    while (1) {
-        struct sockaddr_un client_addr;
-        socklen_t addr_len;
+int applyCommand(char* command) {
+    int opReturn; 
+    char token;
+    char name[MAX_INPUT_SIZE], arg[MAX_INPUT_SIZE];
+    int numTokens = sscanf(command, "%c %s %s", &token, name, arg);
+    if (numTokens < 2) {
+        fprintf(stderr, "Server: invalid command :%s: in Queue\n", command);
+        exit(EXIT_FAILURE);
+    }
 
-        char command[MAX_INPUT_SIZE];
-        int opReturn; 
-        int bytesReceived;
+    switch (token) {
+        case 'c':
+            switch (arg[0]) {
+                case 'f':
+                    printf("Create file: %s\n", name);
+                    opReturn = create_aux(name, T_FILE);
+                    break;
+                case 'd':
+                    printf("Create directory: %s\n", name);
+                    opReturn = create_aux(name, T_DIRECTORY);
+                    break;
+                default:
+                    fprintf(stderr, "Error: invalid node type\n");
+                    exit(EXIT_FAILURE);
+            }
+            break;
+        case 'l':
+            printf("Searching %s...\n", name);
+            opReturn = lookup_aux(name);
+            /* if (searchResult >= 0)
+                printf("Search: %s found\n", name);
+            else
+                printf("Search: %s not found\n", name); */
+            break;
+        case 'd':
+            printf("Delete: %s\n", name);
+            opReturn = delete_aux(name);
+            break;
+        case 'm':
+            printf("Move: %s to %s\n", name, arg);
+            opReturn = move_aux(name, arg);
+            break;
+        case 'p':
+            print_tecnicofs_tree_aux(name);
+            break;
+        default: { /* error */
+            fprintf(stderr, "Error: command to apply\n");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    return opReturn;
+}
+
+/**
+ * Reads commands from the client socket and calls the "applyCommand" function to each one of them.
+ */
+void* receiveCommands() {
+
+    struct sockaddr_un client_addr;
+    socklen_t addr_len;
+    char command[MAX_INPUT_SIZE];
+    int bytesReceived, opReturn;
+
+    while (true) {
 
         addr_len = sizeof(struct sockaddr_un);
+
+        /* Receive command sent by the client socket */
         bytesReceived = recvfrom(scsocket, command, sizeof(command), NORMAL_FLAGS,
                         (struct sockaddr *) &client_addr, &addr_len);
         
@@ -133,101 +207,67 @@ void applyCommands() {
         }
         
         command[bytesReceived] = '\0';
+
         /* Update client socket - HARDCODED ? */
         addr_len = setSocketAddressUn("/tmp/client", &client_addr);
-        
-        char token;
-        char name[MAX_INPUT_SIZE], arg[MAX_INPUT_SIZE];
-        int numTokens = sscanf(command, "%c %s %s", &token, name, arg);
-        if (numTokens < 2) {
-            fprintf(stderr, "Server: invalid command :%s: in Queue\n", command);
-            exit(EXIT_FAILURE);
-        }
 
-        switch (token) {
-            case 'c':
-                switch (arg[0]) {
-                    case 'f':
-                        printf("Create file: %s\n", name);
-                        opReturn = create_aux(name, T_FILE);
-                        break;
-                    case 'd':
-                        printf("Create directory: %s\n", name);
-                        opReturn = create_aux(name, T_DIRECTORY);
-                        break;
-                    default:
-                        fprintf(stderr, "Error: invalid node type\n");
-                        exit(EXIT_FAILURE);
-                }
-                break;
-            case 'l':
-                printf("Searching %s...\n", name);
-                opReturn = lookup_aux(name);
-                /* if (searchResult >= 0)
-                    printf("Search: %s found\n", name);
-                else
-                    printf("Search: %s not found\n", name); */
-                break;
-            case 'd':
-                printf("Delete: %s\n", name);
-                opReturn = delete_aux(name);
-                break;
-            case 'm':
-                printf("Move: %s to %s\n", name, arg);
-                opReturn = move_aux(name, arg);
-                break;
-            case 'p':
-                print_tecnicofs_tree_aux(name);
-                break;
-            default: { /* error */
-                fprintf(stderr, "Error: command to apply\n");
-                exit(EXIT_FAILURE);
-            }
-        }
+        /* Apply the received command and return the operation's result */
+        opReturn = applyCommand(command);
+
+        /* Send such value to the client socket for it to analyse it */
         if (sendto(scsocket, &opReturn, sizeof(opReturn), NORMAL_FLAGS, (struct sockaddr *) &client_addr, addr_len) < 0) {
             perror("Server: error sending operation return to client");
             exit(EXIT_FAILURE);
         }
+
     }
+
 }
 
 
-/*
+/**
  * Initializes the thread pool.
  * Input:
  *  - inputPath: string containing the input file path
  */
 void startThreadPool() {
+
     pthread_t tid[numberThreads];
+
     /* Create consuming threads */
     for (int i = 0; i < numberThreads; i++) {
-        if (pthread_create(&tid[i], NULL, (void *) applyCommands, NULL) != 0) {
+        if (pthread_create(&tid[i], NULL, (void *) receiveCommands, NULL) != 0) {
             fprintf(stderr, "Thread %d failed to create\n", i);
             exit(EXIT_FAILURE);
         } else {
             printf("Thread %d created\n", i);
         }
     }
+
     for (int i = 0; i < numberThreads; i++) {
         if (pthread_join(tid[i], NULL) != 0) {
             fprintf(stderr, "Thread failed to join!\n");
             exit(EXIT_FAILURE);
         }
     }
+
 }
 
 int main(int argc, char* argv[]) {
 
-    /* Initializes TecnicoFS and i-node table */
+    /* Initialize TecnicoFS and i-node table */
     init_fs_aux(argc);
+
+    /* Initialize server socket */
     init_socket(argv[2]);
 
     /* TecnicoFS execution */
     validateNumThreads(argv[1]);
     startThreadPool();
 
-    /* Destroys TecnicoFS and i-node table */
+    /* Destroy TecnicoFS and i-node table */
     destroy_fs();
 
     exit(EXIT_SUCCESS);
+
 }

@@ -26,4 +26,4 @@ tecnicofs-server.o: tecnicofs-server.c fs/operations.h fs/state.h tecnicofs-api-
 
 clean:
 	@echo Cleaning...
-	rm -f fs/*.o *.o tecnicofs-server
+	rm -f fs/*.o *.o tecnicofs-server *.txt

@@ -6,12 +6,24 @@
 FILE* inputFile;
 char* serverName;
 
+/**
+ * Shows how to run the client program.
+ * Input:
+ *  - appName: the program's name.
+ */
 static void displayUsage (const char* appName) {
+
     printf("Usage: %s inputfile server_socket_name\n", appName);
     exit(EXIT_FAILURE);
+
 }
 
+/**
+ * Asserts the correct definition of the program's arguments
+ * and attributes values to the global variables.
+ */ 
 static void parseArgs (long argc, char* const argv[]) {
+
     if (argc != 3) {
         fprintf(stderr, "Invalid format:\n");
         displayUsage(argv[0]);
@@ -21,33 +33,43 @@ static void parseArgs (long argc, char* const argv[]) {
 
     inputFile = fopen(argv[1], "r");
 
-    if (inputFile== NULL) {
+    if (inputFile == NULL) {
         fprintf(stderr, "Error: cannot open input file\n");
         exit(EXIT_FAILURE);
     }
+
 }
 
 void errorParse(){
+
     fprintf(stderr, "Error: command invalid\n");
     exit(EXIT_FAILURE);
+
 }
 
+/**
+ * Reads all lines from the input file and calls functions
+ * that send the correct command to the server socket.
+ */
 void *processInput() {
+
     char line[MAX_INPUT_SIZE];
 
     while (fgets(line, sizeof(line)/sizeof(char), inputFile)) {
+
         char op;
         char arg1[MAX_INPUT_SIZE], arg2[MAX_INPUT_SIZE];
         int res;
 
         int numTokens = sscanf(line, "%c %s %s", &op, arg1, arg2);
 
-        /* perform minimal validation */
+        /* Perform minimal validation */
         if (numTokens < 2) {
             continue;
         }
+
         switch (op) {
-            case 'c':
+            case 'c': /* Create */
                 if(numTokens != 3) {
                     errorParse();
                     break;
@@ -71,7 +93,7 @@ void *processInput() {
                         fprintf(stderr, "Error: invalid node type\n");
                 }
                 break;
-            case 'l':
+            case 'l': /* Lookup */
                 if(numTokens != 2)
                     errorParse();
                 res = tfsLookup(arg1);
@@ -80,7 +102,7 @@ void *processInput() {
                 else
                     printf("Search: %s not found\n", arg1);
                 break;
-            case 'd':
+            case 'd': /* Delete */
                 if(numTokens != 2)
                     errorParse();
                 res = tfsDelete(arg1);
@@ -89,7 +111,7 @@ void *processInput() {
                 else
                   printf("Unable to delete: %s\n", arg1);
                 break;
-            case 'm':
+            case 'm': /* Move */
                 if(numTokens != 3)
                     errorParse();
                 res = tfsMove(arg1, arg2);
@@ -98,7 +120,7 @@ void *processInput() {
                 else
                   printf("Unable to move: %s to %s\n", arg1, arg2);
                 break;
-            case 'p':
+            case 'p': /* Print */
                 if(numTokens != 2)
                     errorParse();
                 res = tfsPrint(arg1);
@@ -107,16 +129,20 @@ void *processInput() {
                 break;
             case '#':
                 break;
-            default: { /* error */
+            default: { /* Error */
                 errorParse();
             }
         }
+
     }
+
     fclose(inputFile);
     return NULL;
+
 }
 
 int main(int argc, char* argv[]) {
+
     parseArgs(argc, argv);
 
     if (tfsMount(serverName) == 0)
@@ -131,4 +157,5 @@ int main(int argc, char* argv[]) {
     tfsUnmount();
 
     exit(EXIT_SUCCESS);
+
 }
