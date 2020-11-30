@@ -1,14 +1,14 @@
-# Teste de paralelismo
+# outputs/Teste de paralelismo
 # empiricamente, corre bem com 2 a 6 tarefas
 # diferença entre correr com 1 vs 2,4... -> -50% do tempo
-# (aumentar o delay é desnecessário - testado com 5000000)
+# (aumentar o delay é desnecessário - outputs/testado com 5000000)
 # Criação de ficheiros base
 c /a d
 c /b d
 c /a d
 c /b d
 c /a d
-p
+p outputs/test15.txt
 c /b d
 c /a d
 c /b d
@@ -18,7 +18,7 @@ l /
 l /
 l /a
 l /b
-p
+p outputs/test16.txt
 l /
 l /
 l /
@@ -26,7 +26,7 @@ l /
 c /a/a d
 c /b/b d
 c /a/c d
-p
+p outputs/test17.txt
 c /b/d d
 # (assegurar outra vez)
 l /
@@ -42,7 +42,7 @@ l /
 c /a/a/a d
 c /b/b/b d
 c /a/c/c d
-p
+p outputs/test18.txt
 c /b/d/d d
 c /a/a/b d
 c /b/b/c d
@@ -74,7 +74,7 @@ c /b/b/b/d1 d
 c /b/b/c/e1 d
 c /a/c/c/f1 d
 c /a/c/d/g1 d
-p
+p outputs/test19.txt
 c /b/d/d/h1 d
 c /b/d/e/i1 d
 l /
@@ -85,7 +85,7 @@ c /a/a/b/c2 d
 c /b/b/b/d2 d
 c /b/b/c/e2 d
 c /a/c/c/f2 d
-p
+p outputs/test20.txt
 c /a/c/d/g2 d
 c /b/d/d/h2 d
 c /b/d/e/i2 d
@@ -99,7 +99,7 @@ d /b/b/c/e1
 d /a/c/c/f1
 d /a/c/d/g1
 d /b/d/d/h1
-p
+p outputs/test21.txt
 d /b/d/e/i1
 l /
 l /
@@ -121,7 +121,7 @@ c /b/b/b/d3 d
 c /b/b/c/e3 d
 c /a/c/c/f3 d
 c /a/c/d/g3 d
-p
+p outputs/test22.txt
 c /b/d/d/h3 d
 c /b/d/e/i3 d
 l /
@@ -139,7 +139,7 @@ l /
 l /
 # (novo bloco em paralelo)
 d /a/a/a/b3
-p
+p outputs/test23.txt
 d /a/a/b/c3
 d /b/b/b/d3
 d /b/b/c/e3

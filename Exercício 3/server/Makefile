@@ -21,9 +21,9 @@ fs/state.o: fs/state.c fs/state.h ../tecnicofs-api-constants.h
 fs/operations.o: fs/operations.c fs/operations.h fs/state.h ../tecnicofs-api-constants.h
 	$(CC) $(CFLAGS) -o fs/operations.o -c fs/operations.c
 
-tecnicofs-server.o: tecnicofs-server.c fs/operations.h fs/state.h tecnicofs-api-constants.h
+tecnicofs-server.o: tecnicofs-server.c fs/operations.h fs/state.h ../tecnicofs-api-constants.h
 	$(CC) $(CFLAGS) -o tecnicofs-server.o -c tecnicofs-server.c
 
 clean:
 	@echo Cleaning...
-	rm -f fs/*.o *.o tecnicofs-server *.txt
+	rm -f fs/*.o *.o tecnicofs-server outputs/*.txt 

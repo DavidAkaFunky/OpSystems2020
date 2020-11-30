@@ -5,7 +5,7 @@ c cypseline f
 c telfer f
 c saccharimetrical f
 c reluctantly f
-p
+p outputs/test5.txt
 c Cephalophus f
 c busted f
 c dalle f
@@ -35,7 +35,7 @@ l expiry
 l coheritage
 l aphonic
 l benumb
-p
+p outputs/test6.txt
 l judgmatic
 l trilingual
 l dummyweed
@@ -73,7 +73,7 @@ l outbawl
 l mesiogingival
 l kentledge
 l palpiform
-p
+p outputs/test7.txt
 l autophotometry
 l laterocaudal
 l unreined
@@ -84,7 +84,7 @@ l tubercularize
 l gaslighting
 d busted
 d Amalfitan
-p
+p outputs/test8.txt
 d hydrant
 d Cephalophus
 d heterolysin

@@ -432,7 +432,10 @@ int move(char * oldPath, char * newPath, int * activeLocks, int * numActiveLocks
  * Input:
  *  - fp: pointer to output file
  */
-void print_tecnicofs_tree(FILE *fp) {
-	inode_print_tree(fp, FS_ROOT, "");
+int print_tecnicofs_tree(FILE *fp) {
+	lock(FS_ROOT, WRITE);
+	int res = inode_print_tree(fp, FS_ROOT, "");
+	unlock(FS_ROOT);
+	return res;
 }
 

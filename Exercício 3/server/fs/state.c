@@ -4,7 +4,6 @@
 #include <unistd.h>
 #include <pthread.h>
 #include "state.h"
-#include "../tecnicofs-api-constants.h"
 
 /*
  * Sleeps for synchronization testing.
@@ -309,10 +308,10 @@ void unlockAll(int inumbers[], int size) {
  *  - inumber: identifier of the i-node
  *  - name: pointer to the name of current file/dir
  */
-void inode_print_tree(FILE *fp, int inumber, char *name) {
+int inode_print_tree(FILE *fp, int inumber, char *name) {
     if (inode_table[inumber].nodeType == T_FILE) {
         fprintf(fp, "%s\n", name);
-        return;
+        return SUCCESS;
     }
 
     if (inode_table[inumber].nodeType == T_DIRECTORY) {
@@ -322,9 +321,11 @@ void inode_print_tree(FILE *fp, int inumber, char *name) {
                 char path[MAX_FILE_NAME];
                 if (snprintf(path, sizeof(path), "%s/%s", name, inode_table[inumber].data.dirEntries[i].name) > sizeof(path)) {
                     fprintf(stderr, "truncation when building full path\n");
+                    return FAIL;
                 }
                 inode_print_tree(fp, inode_table[inumber].data.dirEntries[i].inumber, path);
             }
         }
     }
+    return SUCCESS;
 }

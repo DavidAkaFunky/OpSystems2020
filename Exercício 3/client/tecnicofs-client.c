@@ -124,8 +124,10 @@ void *processInput() {
                 if(numTokens != 2)
                     errorParse();
                 res = tfsPrint(arg1);
-                if (res)
-                  puts("Failed to print");
+                if (!res)
+                  printf("Printed successfully to %s\n", arg1);
+                else
+                  printf("Failed to print to %s\n", arg1);
                 break;
             case '#':
                 break;

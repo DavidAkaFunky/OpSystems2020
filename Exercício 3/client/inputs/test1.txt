@@ -6,9 +6,9 @@ c d f
 c e f
 c f f
 c g f
-p test1.txt
+p outputs/test1.txt
 c h f 
 l c
 d c
 l c
-p test2.txt
+p outputs/test2.txt

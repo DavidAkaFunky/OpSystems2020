@@ -55,7 +55,7 @@ void init_fs_aux(int argc) {
  * Input:
  *  - outputPath: string containing the output file path
  */
-void print_tecnicofs_tree_aux(char* outputPath) {
+int print_tecnicofs_tree_aux(char* outputPath) {
 
     FILE* fp = fopen(outputPath, "w");
     
@@ -64,8 +64,9 @@ void print_tecnicofs_tree_aux(char* outputPath) {
         exit(EXIT_FAILURE);
     }
 
-    print_tecnicofs_tree(fp);
+    int res = print_tecnicofs_tree(fp);
     fclose(fp);
+    return res;
 }
 
 int setSocketAddressUn(char * path, struct sockaddr_un * addr) {
@@ -142,11 +143,9 @@ int applyCommand(char* command) {
         case 'c':
             switch (arg[0]) {
                 case 'f':
-                    printf("Create file: %s\n", name);
                     opReturn = create_aux(name, T_FILE);
                     break;
                 case 'd':
-                    printf("Create directory: %s\n", name);
                     opReturn = create_aux(name, T_DIRECTORY);
                     break;
                 default:
@@ -155,23 +154,16 @@ int applyCommand(char* command) {
             }
             break;
         case 'l':
-            printf("Searching %s...\n", name);
             opReturn = lookup_aux(name);
-            /* if (searchResult >= 0)
-                printf("Search: %s found\n", name);
-            else
-                printf("Search: %s not found\n", name); */
             break;
         case 'd':
-            printf("Delete: %s\n", name);
             opReturn = delete_aux(name);
             break;
         case 'm':
-            printf("Move: %s to %s\n", name, arg);
             opReturn = move_aux(name, arg);
             break;
         case 'p':
-            print_tecnicofs_tree_aux(name);
+            opReturn = print_tecnicofs_tree_aux(name);
             break;
         default: { /* error */
             fprintf(stderr, "Error: command to apply\n");
@@ -200,16 +192,13 @@ void* receiveCommands() {
         bytesReceived = recvfrom(scsocket, command, sizeof(command), NORMAL_FLAGS,
                         (struct sockaddr *) &client_addr, &addr_len);
         
-        if (bytesReceived < 0) {
+        if (bytesReceived == -1) {
             /* Case where peer has perform an orderly shutdown or error has occured */
             perror("Server: error receiving message from client");
             exit(EXIT_FAILURE);
         }
         
         command[bytesReceived] = '\0';
-
-        /* Update client socket - HARDCODED ? */
-        addr_len = setSocketAddressUn("/tmp/client", &client_addr);
 
         /* Apply the received command and return the operation's result */
         opReturn = applyCommand(command);
@@ -236,11 +225,9 @@ void startThreadPool() {
 
     /* Create consuming threads */
     for (int i = 0; i < numberThreads; i++) {
-        if (pthread_create(&tid[i], NULL, (void *) receiveCommands, NULL) != 0) {
+        if (pthread_create(&tid[i], NULL, receiveCommands, NULL) != 0) {
             fprintf(stderr, "Thread %d failed to create\n", i);
             exit(EXIT_FAILURE);
-        } else {
-            printf("Thread %d created\n", i);
         }
     }
 

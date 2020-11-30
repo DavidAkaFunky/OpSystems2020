@@ -5,14 +5,14 @@ c fruits/orange f
 c fruits/banana f 
 c fruits/grape f 
 # error: create again
-p
+p outputs/test9.txt
 c fruits d
 l fruits/apple
 c animals f
 # error: animals is a file
 c animals/cat f
 l animals/cat
-p
+p outputs/test10.txt
 d fruits/grape
 d fruits/grape
 l fruits/grape

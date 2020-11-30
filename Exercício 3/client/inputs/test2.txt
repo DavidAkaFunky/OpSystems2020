@@ -7,9 +7,9 @@ l a
 l a/b
 l a/x
 l a/x/y
-p
+p outputs/test3.txt
 l a/x/y/z
 d a/x
 l a/x
 l a/x/y
-p
+p outputs/test4.txt

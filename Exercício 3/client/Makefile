@@ -21,18 +21,6 @@ tecnicofs-client.o: tecnicofs-client.c ../tecnicofs-api-constants.h tecnicofs-cl
 tecnicofs-client-api.o: tecnicofs-client-api.c ../tecnicofs-api-constants.h tecnicofs-client-api.h
 	$(CC) $(CFLAGS) -o tecnicofs-client-api.o -c tecnicofs-client-api.c
 
-tecnicofs: fs/state.o fs/operations.o main.o
-	$(LD) $(CFLAGS) $(LDFLAGS) -o tecnicofs fs/state.o fs/operations.o main.o
-
-fs/state.o: fs/state.c fs/state.h tecnicofs-api-constants.h
-	$(CC) $(CFLAGS) -o fs/state.o -c fs/state.c
-
-fs/operations.o: fs/operations.c fs/operations.h fs/state.h tecnicofs-api-constants.h
-	$(CC) $(CFLAGS) -o fs/operations.o -c fs/operations.c
-
-main.o: main.c fs/operations.h fs/state.h tecnicofs-api-constants.h
-	$(CC) $(CFLAGS) -o main.o -c main.c
-
 clean:
 	@echo Cleaning...
 	rm -f fs/*.o *.o tecnicofs-client

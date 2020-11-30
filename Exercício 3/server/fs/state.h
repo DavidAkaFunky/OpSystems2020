@@ -6,7 +6,7 @@
 #include <pthread.h>
 #include <stdbool.h>
 #include <errno.h>
-#include "../tecnicofs-api-constants.h"
+#include "../../tecnicofs-api-constants.h"
 
 /* FS root inode number */
 #define FS_ROOT 0
@@ -50,6 +50,6 @@ int dir_add_entry(int inumber, int sub_inumber, char *sub_name);
 void lock(int inumber, int lockType);
 void unlock(int inumber);
 void unlockAll(int inumbers[], int size);
-void inode_print_tree(FILE *fp, int inumber, char *name);
+int inode_print_tree(FILE *fp, int inumber, char *name);
 
 #endif /* INODES_H */

@@ -13,6 +13,6 @@ int lookup_aux(char * name);
 int lookup(char *name, int * activeLocks, int * numActiveLocks, bool write);
 int move_aux(char* oldPath, char* newPath);
 int move(char* oldPath, char* newPath, int* activeLocks, int* numActiveLocks);
-void print_tecnicofs_tree(FILE *fp);
+int print_tecnicofs_tree(FILE *fp);
 
 #endif /* FS_H */
