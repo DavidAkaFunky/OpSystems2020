@@ -150,7 +150,8 @@ int setSocketAddressUn(char * path, struct sockaddr_un * addr) {
  */
 int tfsMount(char * sockPath) {
 
-  char client_file[MAX_FILE_NAME] = {"/tmp/client"};
+  char client_file[MAX_FILE_NAME];
+  sprintf(client_file, "/tmp/clientSocket-%d", getpid());
 
   if ((scsocket = socket(AF_UNIX, SOCK_DGRAM, 0)) == -1) {
     fprintf(stderr, "Client: Error opening server socket\n");
