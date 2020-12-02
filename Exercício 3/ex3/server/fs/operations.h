@@ -11,6 +11,7 @@ int delete_aux(char *name);
 int delete(char * name, int * activeLocks, int * numActiveLocks);
 int lookup_aux(char * name);
 int lookup(char *name, int * activeLocks, int * numActiveLocks, bool write);
+int lookup_move(char *name, int * activeLocks, int * numActiveLocks, int * flag);
 int move_aux(char* oldPath, char* newPath);
 int move(char* oldPath, char* newPath, int* activeLocks, int* numActiveLocks);
 int print_tecnicofs_tree(FILE *fp);

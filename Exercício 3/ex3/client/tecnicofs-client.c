@@ -51,7 +51,7 @@ void errorParse(){
  * Reads all lines from the input file and calls functions
  * that send the correct command to the server socket.
  */
-void *processInput() {
+void * processInput() {
 
     char line[MAX_INPUT_SIZE];
 
@@ -125,9 +125,9 @@ void *processInput() {
                     errorParse();
                 res = tfsPrint(arg1);
                 if (!res)
-                  printf("Printed successfully to %s\n", arg1);
+                  printf("Printed: %s\n", arg1);
                 else
-                  printf("Failed to print to %s\n", arg1);
+                  printf("Unable to print: %s\n", arg1);
                 break;
             case '#':
                 break;

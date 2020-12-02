@@ -15,7 +15,6 @@
 
 #define MAX_COMMANDS 10
 #define MAX_INPUT_SIZE 100
-#define NORMAL_FLAGS 0
 
 int numberThreads = 0;
 
@@ -87,14 +86,16 @@ int setSocketAddressUn(char * path, struct sockaddr_un * addr) {
 void init_socket(char * socketPath) {
     /* Initialize socket **/
     if ((scsocket = socket(AF_UNIX, SOCK_DGRAM, 0)) == -1) {
-        fprintf(stderr, "Server: Error opening socket\n");
+        perror("Server: Error opening socket");
         exit(EXIT_FAILURE);
     }
 
     /* Erase socketPath if it already exists */
-    if (unlink(socketPath) != ENOENT) {
-        perror("Client: Error unlinking client socket path");
-        exit(EXIT_FAILURE);
+    if (unlink(socketPath) == -1) {
+        if (errno != ENOENT) {
+            perror("Error: Error unlinking server socket path");
+            exit(EXIT_FAILURE);
+        }
     }
 
     /* Erase all data in server address and initialize struct */
@@ -102,7 +103,7 @@ void init_socket(char * socketPath) {
 
     /* Bind a name to the server socket */
     if (bind(scsocket, (struct sockaddr *) &server_addr, ser_addr_len) == -1) {
-        fprintf(stderr, "Server: Error binding name to socket\n");
+        perror("Server: Error binding name to socket");
         exit(EXIT_FAILURE);
     }
 
@@ -180,7 +181,7 @@ int applyCommand(char* command) {
 /**
  * Reads commands from the client socket and calls the "applyCommand" function to each one of them.
  */
-void* receiveCommands() {
+void * receiveCommands() {
 
     struct sockaddr_un client_addr;
     socklen_t addr_len;
@@ -192,11 +193,9 @@ void* receiveCommands() {
         addr_len = sizeof(struct sockaddr_un);
 
         /* Receive command sent by the client socket */
-        bytesReceived = recvfrom(scsocket, command, sizeof(command), NORMAL_FLAGS,
-                        (struct sockaddr *) &client_addr, &addr_len);
+        bytesReceived = recvfrom(scsocket, command, sizeof(command), 0, (struct sockaddr *) &client_addr, &addr_len);
         
         if (bytesReceived == -1) {
-            /* Case where peer has perform an orderly shutdown or error has occured */
             perror("Server: error receiving message from client");
             exit(EXIT_FAILURE);
         }
@@ -207,7 +206,7 @@ void* receiveCommands() {
         opReturn = applyCommand(command);
 
         /* Send such value to the client socket for it to analyse it */
-        if (sendto(scsocket, &opReturn, sizeof(opReturn), NORMAL_FLAGS, (struct sockaddr *) &client_addr, addr_len) == -1) {
+        if (sendto(scsocket, &opReturn, sizeof(opReturn), 0, (struct sockaddr *) &client_addr, addr_len) == -1) {
             perror("Server: error sending operation return to client");
             exit(EXIT_FAILURE);
         }

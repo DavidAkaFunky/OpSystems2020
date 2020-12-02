@@ -13,7 +13,7 @@ LDFLAGS=-lm -lpthread
 all: tecnicofs-server
 
 tecnicofs-server: fs/state.o fs/operations.o tecnicofs-server.o
-	$(LD) $(CFLAGS) $(LDFLAGS) -o tecnicofs-server fs/state.o fs/operations.o tecnicofs-server.o
+	$(LD) $(CFLAGS) $(LDFLAGS) -o tecnicofs fs/state.o fs/operations.o tecnicofs-server.o
 
 fs/state.o: fs/state.c fs/state.h ../tecnicofs-api-constants.h
 	$(CC) $(CFLAGS) -o fs/state.o -c fs/state.c
@@ -26,4 +26,4 @@ tecnicofs-server.o: tecnicofs-server.c fs/operations.h fs/state.h ../tecnicofs-a
 
 clean:
 	@echo Cleaning...
-	rm -f fs/*.o *.o tecnicofs-server outputs/*.txt 
+	rm -f fs/*.o *.o tecnicofs outputs/*.txt 
